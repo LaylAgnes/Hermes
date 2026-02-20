@@ -3,11 +3,12 @@ package com.hermes.jobs.job;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public interface JobRepository extends JpaRepository<JobEntity, UUID> {
+public interface JobRepository extends JpaRepository<JobEntity, UUID>, JpaSpecificationExecutor<JobEntity> {
 
     Optional<JobEntity> findByUrl(String url);
 

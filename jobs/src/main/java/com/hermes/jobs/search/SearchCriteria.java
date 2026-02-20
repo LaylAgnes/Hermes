@@ -8,6 +8,9 @@ public class SearchCriteria {
     public Set<Seniority> seniorities = new HashSet<>();
     public Set<Area> areas = new HashSet<>();
     public Set<String> stacks = new HashSet<>();
+    public Set<String> workModes = new HashSet<>();
+    public Set<String> locationTerms = new HashSet<>();
+    public Set<String> freeTextTerms = new HashSet<>();
 
     public boolean remote;
     public String country;
