@@ -5,8 +5,21 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public final class JobSearchSpecifications {
+
+    private static final Map<Area, Set<String>> AREA_KEYWORDS = Map.of(
+            Area.BACKEND, Set.of("backend", "back-end", "api", "microservices"),
+            Area.FRONTEND, Set.of("frontend", "front-end", "ui", "ux"),
+            Area.FULLSTACK, Set.of("fullstack", "full-stack"),
+            Area.MOBILE, Set.of("mobile", "android", "ios", "react-native", "flutter"),
+            Area.DATA, Set.of("data", "dados", "analytics", "machine learning"),
+            Area.DEVOPS, Set.of("devops", "sre", "infra", "platform"),
+            Area.SECURITY, Set.of("security", "seguranca", "cyber"),
+            Area.QA, Set.of("qa", "quality", "test")
+    );
 
     private JobSearchSpecifications() {
     }
@@ -38,6 +51,13 @@ public final class JobSearchSpecifications {
                 predicates.add(cb.or(stackPredicates.toArray(jakarta.persistence.criteria.Predicate[]::new)));
             }
 
+            if (!criteria.areas.isEmpty()) {
+                List<jakarta.persistence.criteria.Predicate> areaPredicates = criteria.areas.stream()
+                        .map(area -> buildAreaPredicate(area, root, cb))
+                        .toList();
+                predicates.add(cb.or(areaPredicates.toArray(jakarta.persistence.criteria.Predicate[]::new)));
+            }
+
             if (!criteria.locationTerms.isEmpty()) {
                 List<jakarta.persistence.criteria.Predicate> locationPredicates = criteria.locationTerms.stream()
                         .map(location -> cb.like(cb.lower(cb.coalesce(root.get("location"), "")), "%" + location + "%"))
@@ -59,5 +79,25 @@ public final class JobSearchSpecifications {
 
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
+    }
+
+    private static jakarta.persistence.criteria.Predicate buildAreaPredicate(
+            Area area,
+            jakarta.persistence.criteria.Root<JobEntity> root,
+            jakarta.persistence.criteria.CriteriaBuilder cb
+    ) {
+        Set<String> keywords = AREA_KEYWORDS.getOrDefault(area, Set.of(area.name().toLowerCase()));
+
+        List<jakarta.persistence.criteria.Predicate> predicates = keywords.stream()
+                .map(keyword -> {
+                    String likeToken = "%" + keyword + "%";
+                    return cb.or(
+                            cb.like(cb.lower(cb.coalesce(root.get("title"), "")), likeToken),
+                            cb.like(cb.lower(cb.coalesce(root.get("description"), "")), likeToken)
+                    );
+                })
+                .toList();
+
+        return cb.or(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
     }
 }

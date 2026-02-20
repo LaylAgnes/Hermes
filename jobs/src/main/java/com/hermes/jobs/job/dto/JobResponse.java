@@ -12,6 +12,9 @@ public record JobResponse(
         String title,
         String location,
         String description,
+        String stacks,
+        String seniority,
+        String workMode,
         OffsetDateTime coletadoEm,
         boolean active
 ) {}
