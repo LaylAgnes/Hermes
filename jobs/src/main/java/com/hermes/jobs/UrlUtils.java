@@ -22,6 +22,9 @@ public class UrlUtils {
         try {
             var uri = URI.create(url);
             String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return "unknown";
+            }
 
             // greenhouse
             if (host.contains("greenhouse")) {

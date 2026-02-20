@@ -15,6 +15,9 @@ public class JobMapper {
                 e.getTitle(),
                 e.getLocation(),
                 e.getDescription(),
+                e.getStacks(),
+                e.getSeniority(),
+                e.getWorkMode(),
                 e.getColetadoEm(),
                 e.isActive()
         );
