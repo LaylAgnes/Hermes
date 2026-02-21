@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const sources = require('./sources');
 const { collectJobs, validateJob } = require('./lib/extractors');
 const { connectRabbit, publishJob } = require('./lib/rabbitBus');
+const { createIdempotencyStore } = require('./lib/idempotencyStore');
 
 const RABBIT_URL = process.env.RABBIT_URL || 'amqp://localhost';
 const HEADLESS = process.env.HEADLESS !== 'false';
@@ -15,7 +16,6 @@ const SOURCE_RETRIES = Number(process.env.MAX_SOURCE_RETRIES || 2);
 const METRICS_PORT = Number(process.env.METRICS_PORT || 0);
 const PARSER_VERSION = process.env.PARSER_VERSION || 'v4';
 
-const seen = new Set();
 const metrics = {
   runs: 0,
   published: 0,
@@ -44,13 +44,16 @@ function startServer() {
   }).listen(METRICS_PORT, '0.0.0.0');
 }
 
-async function runOnce(browser, channel) {
+async function runOnce(browser, channel, idempotency, opts = {}) {
+  const collector = opts.collector || collectJobs;
+  const sourceList = opts.sources || sources;
+
   metrics.runs += 1;
   metrics.lastRunAt = new Date().toISOString();
 
-  for (const source of sources) {
+  for (const source of sourceList) {
     try {
-      const jobs = await collectJobs({
+      const jobs = await collector({
         browser,
         source,
         sourceRetries: SOURCE_RETRIES,
@@ -62,8 +65,8 @@ async function runOnce(browser, channel) {
 
       for (const job of jobs) {
         const key = `${job.url}::${job.ingestionTraceId}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
+        const claimed = await idempotency.claim('producer', key);
+        if (!claimed) continue;
 
         const result = validateJob(job);
         if (!result.valid) {
@@ -82,25 +85,33 @@ async function runOnce(browser, channel) {
   metrics.health = metrics.sourceFailures > 0 ? 'degraded' : 'healthy';
 }
 
-(async () => {
+async function main() {
   startServer();
   const { conn, channel } = await connectRabbit(RABBIT_URL);
   const browser = await chromium.launch({ headless: HEADLESS });
+  const idempotency = await createIdempotencyStore();
 
   try {
     if (RUN_MODE === 'continuous') {
       while (true) {
-        await runOnce(browser, channel);
+        await runOnce(browser, channel, idempotency);
         await sleep(POLL_INTERVAL_MS);
       }
     } else {
-      await runOnce(browser, channel);
+      await runOnce(browser, channel, idempotency);
     }
   } finally {
     if (RUN_MODE !== 'continuous') {
       await browser.close();
+      await idempotency.close();
       await channel.close();
       await conn.close();
     }
   }
-})();
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { runOnce, metrics };

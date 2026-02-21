@@ -6,19 +6,18 @@ const {
   publishDlq,
   publishJob
 } = require('./lib/rabbitBus');
+const { createIdempotencyStore } = require('./lib/idempotencyStore');
 
 const RABBIT_URL = process.env.RABBIT_URL || 'amqp://localhost';
 const API_URL = process.env.API_URL || 'http://localhost:8080/api/jobs/import';
 const REQUEST_TIMEOUT = Number(process.env.REQUEST_TIMEOUT_MS || 30000);
 const API_RETRIES = Number(process.env.API_RETRIES || 3);
 
-const seen = new Set();
-
 async function sendJob(job) {
   await axios.post(API_URL, { jobs: [job] }, { timeout: REQUEST_TIMEOUT });
 }
 
-async function processMessage(channel, msg) {
+async function processMessage(channel, msg, idempotency, send = sendJob) {
   const wrapped = parseMessage(msg);
   const job = wrapped?.payload ? wrapped.payload : wrapped;
 
@@ -28,7 +27,8 @@ async function processMessage(channel, msg) {
   }
 
   const key = `${job.url}::${job.ingestionTraceId || 'none'}`;
-  if (seen.has(key)) {
+  const claimed = await idempotency.claim('consumer', key);
+  if (!claimed) {
     channel.ack(msg);
     return;
   }
@@ -36,8 +36,7 @@ async function processMessage(channel, msg) {
   const retryCount = Number(msg.properties.headers?.retryCount || 0);
 
   try {
-    await sendJob(job);
-    seen.add(key);
+    await send(job);
     channel.ack(msg);
   } catch (error) {
     if (retryCount < API_RETRIES) {
@@ -51,16 +50,23 @@ async function processMessage(channel, msg) {
   }
 }
 
-(async () => {
+async function main() {
   const { channel } = await connectRabbit(RABBIT_URL);
+  const idempotency = await createIdempotencyStore();
   channel.prefetch(10);
 
   await channel.consume(QUEUE_JOBS, msg => {
-    processMessage(channel, msg).catch(err => {
+    processMessage(channel, msg, idempotency).catch(err => {
       console.error('consumer error:', err.message);
       if (msg) channel.nack(msg, false, true);
     });
   }, { noAck: false });
 
   console.log('consumer running');
-})();
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { processMessage, sendJob };

@@ -1,10 +1,19 @@
-const amqp = require('amqplib');
+let amqp = null;
+try {
+  amqp = require('amqplib');
+} catch {
+  amqp = null;
+}
 
 const QUEUE_JOBS = process.env.RABBIT_QUEUE_JOBS || 'hermes.jobs';
 const QUEUE_DLQ = process.env.RABBIT_QUEUE_DLQ || 'hermes.jobs.dlq';
 const QUEUE_REPLAY = process.env.RABBIT_QUEUE_REPLAY || 'hermes.jobs.replay';
 
 async function connectRabbit(rabbitUrl) {
+  if (!amqp) {
+    throw new Error('amqplib not installed; run npm install to use RabbitMQ features');
+  }
+
   const conn = await amqp.connect(rabbitUrl);
   const channel = await conn.createChannel();
 

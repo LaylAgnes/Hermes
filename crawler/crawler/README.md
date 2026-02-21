@@ -6,11 +6,12 @@ Crawler multi-fonte com **fila real RabbitMQ** para coletar vagas e enviar para 
 
 ```bash
 npm install
-npm run producer   # coleta e publica mensagens
-npm run consumer   # consome mensagens e envia para API
+npm run producer        # coleta e publica mensagens
+npm run consumer        # consome mensagens e envia para API
+npm run dlq-dashboard   # painel operacional para triagem/replay da DLQ
 ```
 
-Replay de DLQ com filtros:
+Replay de DLQ via CLI com filtros:
 
 ```bash
 REPLAY_SOURCE=vtex-lever REPLAY_ERROR_CONTAINS=timeout npm run replay
@@ -33,11 +34,22 @@ REPLAY_SOURCE=vtex-lever REPLAY_ERROR_CONTAINS=timeout npm run replay
 - `METRICS_PORT` (ex.: `9090` para `/healthz` e `/metrics` no producer)
 - `PARSER_VERSION` (default: `v4`)
 
-Replay seletivo da DLQ:
+Idempotência distribuída (Redis):
+- `IDEMPOTENCY_REDIS_URL` (default: `redis://localhost:6379`)
+- `IDEMPOTENCY_KEY_PREFIX` (default: `hermes:idempotency`)
+- `IDEMPOTENCY_TTL_SECONDS` (default: `604800`)
+- `IDEMPOTENCY_REQUIRED` (default: `true`; use `false` para modo degradado sem Redis)
+
+Replay seletivo da DLQ (CLI e painel):
 - `REPLAY_SOURCE`
 - `REPLAY_ERROR_CONTAINS`
 - `REPLAY_FROM` / `REPLAY_TO` (ISO-8601)
 - `REPLAY_LIMIT`
+- `REPLAY_SCAN_LIMIT`
+
+Painel DLQ:
+- `DLQ_DASHBOARD_PORT` (default: `8091`)
+- `DLQ_DASHBOARD_MAX_SCAN` (default: `500`)
 
 ## Fontes/ATS suportadas
 
@@ -50,5 +62,13 @@ Replay seletivo da DLQ:
 
 - Arquitetura producer/consumer separada com RabbitMQ.
 - Retry por mensagem no consumer e DLQ gerenciada no broker.
-- Replay controlado da DLQ por critérios (source/erro/janela de tempo).
-- Idempotência por `url + ingestionTraceId`.
+- Replay controlado da DLQ por critérios (source/erro/janela de tempo) via CLI e painel web.
+- Idempotência forte por `url + ingestionTraceId` com chave distribuída em Redis.
+
+## Teste E2E (crawler no fluxo)
+
+```bash
+npm run test:e2e
+```
+
+Valida o fluxo producer -> fila -> consumer -> `POST /api/jobs/import` com metadados de rastreabilidade.
