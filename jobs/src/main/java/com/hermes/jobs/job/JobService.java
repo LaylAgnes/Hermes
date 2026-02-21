@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,7 +31,16 @@ public class JobService {
         if (request.urls() == null || request.urls().isEmpty())
             return 0;
 
-        Set<String> uniqueUrls = new HashSet<>(request.urls());
+        Set<String> uniqueUrls = request.urls().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(url -> !url.isBlank())
+                .filter(this::isSupportedUrl)
+                .collect(Collectors.toSet());
+
+        if (uniqueUrls.isEmpty())
+            return 0;
+
         OffsetDateTime now = OffsetDateTime.now();
 
         List<JobEntity> toSave = new ArrayList<>();
@@ -93,17 +103,23 @@ public class JobService {
         List<JobEntity> toSave = new ArrayList<>();
 
         for (var doc : request.jobs()) {
+            if (doc == null || doc.url() == null || doc.url().isBlank())
+                continue;
 
-            JobEntity entity = repository.findByUrl(doc.url())
+            String normalizedUrl = doc.url().trim();
+            if (!isSupportedUrl(normalizedUrl))
+                continue;
+
+            JobEntity entity = repository.findByUrl(normalizedUrl)
                     .orElseGet(JobEntity::new);
 
-            entity.setUrl(doc.url());
-            entity.setEmpresa(UrlUtils.extractCompany(doc.url()));
-            entity.setDomain(UrlUtils.extractDomain(doc.url()));
-            entity.setSource(UrlUtils.extractSource(doc.url()));
+            entity.setUrl(normalizedUrl);
+            entity.setEmpresa(UrlUtils.extractCompany(normalizedUrl));
+            entity.setDomain(UrlUtils.extractDomain(normalizedUrl));
+            entity.setSource(UrlUtils.extractSource(normalizedUrl));
 
-            if (doc.title() != null) entity.setTitle(doc.title());
-            if (doc.location() != null) entity.setLocation(doc.location());
+            entity.setTitle(normalizeNullableText(doc.title()));
+            entity.setLocation(normalizeNullableText(doc.location()));
 
             // limpa texto
             String clean = TextSanitizer.clean(doc.description());
@@ -118,18 +134,12 @@ public class JobService {
             var result = JobClassifier.classify(classificationText);
 
             // stacks ordenados para consistência
-            if (!result.stacks().isEmpty()) {
-                String stacks = result.stacks().stream()
-                        .sorted()
-                        .collect(Collectors.joining(","));
-                entity.setStacks(stacks);
-            }
+            entity.setStacks(result.stacks().isEmpty()
+                    ? null
+                    : result.stacks().stream().sorted().collect(Collectors.joining(",")));
 
-            if (result.seniority() != null)
-                entity.setSeniority(result.seniority());
-
-            if (result.workMode() != null)
-                entity.setWorkMode(result.workMode());
+            entity.setSeniority(result.seniority());
+            entity.setWorkMode(result.workMode());
 
             entity.setColetadoEm(now);
             entity.setActive(true);
@@ -137,7 +147,29 @@ public class JobService {
             toSave.add(entity);
         }
 
+        if (toSave.isEmpty())
+            return 0;
+
         repository.saveAll(toSave);
         return toSave.size();
+    }
+
+    private boolean isSupportedUrl(String url) {
+        try {
+            URI uri = URI.create(url);
+            return uri.getHost() != null
+                    && uri.getScheme() != null
+                    && ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()));
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String normalizeNullableText(String value) {
+        if (value == null)
+            return null;
+
+        String normalized = value.trim();
+        return normalized.isBlank() ? null : normalized;
     }
 }

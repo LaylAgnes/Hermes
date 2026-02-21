@@ -18,8 +18,13 @@ public class JobController {
     private final JobService service;
 
     @PostMapping("/import")
-    public int importJobs(@RequestBody JobImportRequest request) {
+    public int importJobs(@RequestBody @Valid JobImportRequest request) {
         return service.importDocuments(request);
+    }
+
+    @PostMapping("/import-urls")
+    public int importUrls(@RequestBody @Valid ImportRequest request) {
+        return service.importUrls(request);
     }
 
     @GetMapping

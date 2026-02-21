@@ -21,10 +21,13 @@ public class SearchService {
     private final JobRepository repository;
 
     public Page<JobEntity> search(String query, Pageable pageable) {
-
         SearchCriteria criteria = QueryParser.parse(query);
+        return search(criteria, pageable);
+    }
 
-        if (criteria.rawText == null || criteria.rawText.isBlank()) {
+    public Page<JobEntity> search(SearchCriteria criteria, Pageable pageable) {
+
+        if (criteria == null || criteria.rawText == null || criteria.rawText.isBlank()) {
             return repository.findByActiveTrue(pageable);
         }
 
