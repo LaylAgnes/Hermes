@@ -262,6 +262,7 @@ async function enqueueJobs(jobs) {
     queue.push(validation.job);
     metrics.queuedJobs += 1;
   }
+}
 
   await persistQueue();
 }
