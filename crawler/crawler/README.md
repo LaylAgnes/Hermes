@@ -71,4 +71,6 @@ Painel DLQ:
 npm run test:e2e
 ```
 
-Valida o fluxo producer -> fila -> consumer -> `POST /api/jobs/import` com metadados de rastreabilidade.
+Valida o fluxo com broker RabbitMQ real: producer -> fila AMQP -> consumer -> `POST /api/jobs/import`, incluindo cenário de roteamento para DLQ em falha de import.
+
+> Requer RabbitMQ acessível em `RABBIT_URL` (default `amqp://localhost`).
