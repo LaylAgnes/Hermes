@@ -1,0 +1,48 @@
+# Runbook de Observabilidade (Hermes)
+
+## Objetivo
+Orientar resposta rápida para incidentes de ingestão/search usando métricas de crawler + backend.
+
+## Pré-requisitos de stack
+- Subir stack: `monitoring/stack/docker-compose.observability.yml`.
+- Garantir scrape de `hermes-producer`, `hermes-consumer` e `hermes-jobs`.
+
+## Dashboards sugeridos
+- **Crawler ingestão**: taxa de publicação, retries, DLQ e disponibilidade por source.
+- **Jobs API**: RPS, 5xx, latência p95 e disponibilidade.
+
+## Alertas e ação imediata
+
+### 1) `ConsumerDown`
+1. Verificar processo do consumer (`npm run consumer`) e conectividade RabbitMQ.
+2. Conferir `/healthz` no `CONSUMER_METRICS_PORT`.
+3. Se reiniciado, observar `hermes_consumer_processing_errors_total` e fila DLQ.
+
+### 2) `ProducerSourceFailuresHigh`
+1. Identificar fonte com falha usando `hermes_producer_source_failures_by_source_total`.
+2. Validar `hermes_producer_source_up{source=...}`.
+3. Desabilitar temporariamente source problemática (se necessário) e abrir correção do parser.
+
+### 3) `JobsSearch5xxHigh`
+1. Confirmar aumento de 5xx em `/api/v1/search/filters`.
+2. Correlacionar com traces (`traceparent`) de requisições recentes.
+3. Verificar disponibilidade de banco e logs do serviço jobs.
+
+### 4) `JobsImportRejectedBySourceHigh`
+1. Verificar `hermes_jobs_import_rejected_by_source_total` por `source`, `source_type` e `reason`.
+2. Correlacionar com `hermes_consumer_imported_by_source_total` para detectar degradação upstream.
+3. Validar parser/config da fonte e payload recebido no endpoint de import.
+
+### 5) `JobsHighLatencyP95`
+1. Comparar p95 com taxa de requests.
+2. Validar uso de CPU/memória e volume de dataset.
+3. Ajustar paginação/filtros e avaliar tuning do ranking.
+
+## Coleta mínima recomendada
+- Scrape Prometheus: `hermes-producer`, `hermes-consumer`, `hermes-jobs`.
+- Retenção mínima: 14 dias para análise de tendência.
+
+
+## Indicadores fim-a-fim por source
+- Ingestão no consumer: `hermes_consumer_imported_by_source_total`, `hermes_consumer_retried_by_source_total`, `hermes_consumer_dlq_by_source_total`.
+- Import no backend: `hermes_jobs_import_by_source_total`, `hermes_jobs_import_rejected_by_source_total`.

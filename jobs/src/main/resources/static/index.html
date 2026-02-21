@@ -14,44 +14,44 @@
   <div class="panel">
     <div class="grid">
       <div class="field">
-        <label>Palavra-chave</label>
-        <input id="keyword" placeholder="ex: fintech, pagamentos" />
+        <label for="keyword">Palavra-chave</label>
+        <input id="keyword" placeholder="ex: fintech, pagamentos" aria-label="Palavra-chave" />
       </div>
       <div class="field">
-        <label>Stacks (enter para adicionar)</label>
-        <input id="stack" placeholder="ex: java, react" />
-        <div id="stackChips" class="chips"></div>
+        <label for="stack">Stacks (enter para adicionar)</label>
+        <input id="stack" placeholder="ex: java, react" aria-label="Stack" />
+        <div id="stackChips" class="chips" aria-live="polite"></div>
       </div>
       <div class="field">
-        <label>Senioridade</label>
-        <select id="seniority"><option value="">Adicionar...</option></select>
-        <div id="seniorityChips" class="chips"></div>
+        <label for="seniority">Senioridade</label>
+        <select id="seniority" aria-label="Senioridade"><option value="">Adicionar...</option></select>
+        <div id="seniorityChips" class="chips" aria-live="polite"></div>
       </div>
       <div class="field">
-        <label>Área</label>
-        <select id="area"><option value="">Adicionar...</option></select>
-        <div id="areaChips" class="chips"></div>
+        <label for="area">Área</label>
+        <select id="area" aria-label="Área"><option value="">Adicionar...</option></select>
+        <div id="areaChips" class="chips" aria-live="polite"></div>
       </div>
       <div class="field">
-        <label>Linguagem</label>
-        <select id="language"><option value="">Todas</option></select>
+        <label for="language">Linguagem</label>
+        <select id="language" aria-label="Linguagem"><option value="">Todas</option></select>
       </div>
       <div class="field">
-        <label>Framework</label>
-        <select id="framework"><option value="">Todos</option></select>
+        <label for="framework">Framework</label>
+        <select id="framework" aria-label="Framework"><option value="">Todos</option></select>
       </div>
       <div class="field">
-        <label>Modelo de trabalho</label>
-        <select id="workMode"><option value="">Adicionar...</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
-        <div id="workModeChips" class="chips"></div>
+        <label for="workMode">Modelo de trabalho</label>
+        <select id="workMode" aria-label="Modelo de trabalho"><option value="">Adicionar...</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
+        <div id="workModeChips" class="chips" aria-live="polite"></div>
       </div>
       <div class="field">
-        <label>Localização</label>
-        <input id="location" placeholder="ex: brasil, portugal" />
+        <label for="location">Localização</label>
+        <input id="location" placeholder="ex: brasil, portugal" aria-label="Localização" />
       </div>
       <div class="field">
-        <label>Ordenação</label>
-        <select id="sort"><option value="coletadoEm,desc">Mais recentes</option><option value="title,asc">Título (A-Z)</option><option value="empresa,asc">Empresa (A-Z)</option></select>
+        <label for="sort">Ordenação</label>
+        <select id="sort" aria-label="Ordenação"><option value="coletadoEm,desc">Mais recentes</option><option value="title,asc">Título (A-Z)</option><option value="empresa,asc">Empresa (A-Z)</option></select>
       </div>
       <div class="field full-width">
         <div class="actions">
@@ -65,8 +65,8 @@
 
   <div class="panel">
     <h3>Resultados</h3>
-    <p id="status" class="muted">Use os filtros e clique em buscar.</p>
-    <div id="results"></div>
+    <p id="status" class="muted" role="status" aria-live="polite">Use os filtros e clique em buscar.</p>
+    <div id="results" role="region" aria-label="Resultados da busca"></div>
     <div class="pager">
       <button id="prevBtn" type="button" class="secondary">Anterior</button>
       <span id="pageInfo" class="muted">Página 1</span>
@@ -74,7 +74,7 @@
     </div>
   </div>
 
-  <dialog id="jobDetails">
+  <dialog id="jobDetails" aria-labelledby="detailTitle">
     <h3 id="detailTitle"></h3>
     <p id="detailMeta" class="muted"></p>
     <p id="detailDescription"></p>

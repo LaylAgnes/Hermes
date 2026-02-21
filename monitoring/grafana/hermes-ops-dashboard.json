@@ -1,0 +1,114 @@
+{
+  "title": "Hermes Ops - Ingestion + Search",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Producer Published Jobs",
+      "targets": [
+        {
+          "expr": "rate(hermes_producer_jobs_published_total[5m])"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer DLQ Rate",
+      "targets": [
+        {
+          "expr": "rate(hermes_consumer_dlq_total[5m])"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Producer Source Up",
+      "targets": [
+        {
+          "expr": "hermes_producer_source_up"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs API p95 /api/v1/search/filters",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/v1/search/filters\"}[5m])) by (le))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs Imports by Source",
+      "targets": [
+        {
+          "expr": "sum by (source, source_type) (rate(hermes_jobs_import_by_source_total[5m]))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs Rejected Imports by Source",
+      "targets": [
+        {
+          "expr": "sum by (source, source_type, reason) (rate(hermes_jobs_import_rejected_by_source_total[5m]))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer Imported by Source",
+      "targets": [
+        {
+          "expr": "sum by (source, source_type) (rate(hermes_consumer_imported_by_source_total[5m]))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      }
+    }
+  ]
+}

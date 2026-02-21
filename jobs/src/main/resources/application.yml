@@ -44,3 +44,12 @@ search:
     locations:
       - chile
       - colombia
+
+  ranking:
+    feature-logging-enabled: false
+    weight-heuristic: 1.0
+    weight-title-hits: 1.3
+    weight-description-hits: 0.7
+    weight-stack-hits: 1.2
+    weight-seniority-match: 1.0
+    weight-freshness-days: 0.2
