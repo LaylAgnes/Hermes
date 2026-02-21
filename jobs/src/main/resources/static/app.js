@@ -119,7 +119,7 @@ function renderPageInfo() {
 
 function openDetails(job) {
   document.getElementById('detailTitle').textContent = job.title || 'Sem título';
-  document.getElementById('detailMeta').textContent = `${job.empresa || '-'} • ${job.location || '-'} • ${job.seniority || '-'}`;
+  document.getElementById('detailMeta').textContent = `${job.empresa || '-'} • ${job.location || '-'} • ${job.seniority || '-'} • ${job.sourceType || '-'} • conf: ${job.confidence ?? '-'}`;
   document.getElementById('detailDescription').textContent = job.description || 'Sem descrição';
   document.getElementById('detailUrl').href = job.url;
   document.getElementById('jobDetails').showModal();
