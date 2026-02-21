@@ -17,8 +17,21 @@ npm run start
 - `NAV_TIMEOUT_MS` (default: `45000`)
 - `REQUEST_TIMEOUT_MS` (default: `30000`)
 - `API_RETRIES` (default: `3`)
+- `RUN_MODE` (`batch`/`continuous`, default: `batch`)
+- `POLL_INTERVAL_MS` (default: `900000`)
+- `MAX_SOURCE_RETRIES` (default: `2`)
+- `DLQ_PATH` (default: `./dlq.jsonl`)
 
 ## Fontes
 
 As fontes ficam em `sources.js`.
-Hoje o crawler já aceita várias fontes Greenhouse e deduplica por URL antes do envio.
+
+Suporta `greenhouse`, `lever`, `workday` e `gupy`.
+
+## Operação
+
+- Validação por qualidade de dados (campos obrigatórios e confiança).
+- Deduplicação por URL antes de enviar.
+- Retry por fonte/API.
+- DLQ em JSONL para falhas de extração, validação e envio.
+- Métricas básicas por execução no log (`[metrics]`).

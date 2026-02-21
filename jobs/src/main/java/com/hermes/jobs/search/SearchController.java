@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/search")
+@RequestMapping({"/api/search", "/api/v1/search"})
 @RequiredArgsConstructor
 public class SearchController {
 
