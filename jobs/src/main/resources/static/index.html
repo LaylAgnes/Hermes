@@ -13,8 +13,13 @@
     label { font-size: 12px; color: #555; }
     input, select, button { padding: 10px; border-radius: 8px; border: 1px solid #d2d7e1; }
     button { background: #1f6feb; color: #fff; border: none; cursor: pointer; }
+    button[disabled] { opacity: .6; cursor: wait; }
+    .actions { display: flex; gap: 8px; }
+    .muted { color: #666; font-size: 13px; }
+    .error { color: #a10000; }
     .job { padding: 12px; border: 1px solid #e7ebf1; border-radius: 10px; margin-bottom: 10px; background: #fff; }
     .meta { color: #666; font-size: 13px; margin: 4px 0; }
+    .pager { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
     @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -59,26 +64,76 @@
       </div>
       <div class="field" style="justify-content:end">
         <label>&nbsp;</label>
-        <button id="searchBtn">Buscar vagas</button>
+        <div class="actions">
+          <button id="searchBtn">Buscar vagas</button>
+          <button id="clearBtn" type="button" style="background:#6b7280">Limpar</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="panel">
     <h3>Resultados</h3>
+    <p id="status" class="muted">Use os filtros e clique em buscar.</p>
     <div id="results"></div>
+    <div class="pager">
+      <button id="prevBtn" type="button" style="background:#4b5563">Anterior</button>
+      <span id="pageInfo" class="muted">Página 1</span>
+      <button id="nextBtn" type="button" style="background:#4b5563">Próxima</button>
+    </div>
   </div>
 </div>
 
 <script>
-async function loadOptions() {
-  const r = await fetch('/api/search/options');
-  const data = await r.json();
+const state = {
+  page: 0,
+  size: 20,
+  totalPages: 0,
+  totalElements: 0,
+  loading: false
+};
 
-  fillSelect('seniority', data.seniorities || []);
-  fillSelect('area', data.areas || []);
-  fillSelect('language', data.languages || []);
-  fillSelect('framework', data.frameworks || []);
+function formIds() {
+  return ['keyword', 'seniority', 'area', 'stack', 'language', 'framework', 'workMode', 'location'];
+}
+
+function saveFilters() {
+  const payload = {};
+  formIds().forEach(id => payload[id] = document.getElementById(id).value || '');
+  localStorage.setItem('hermes-search-filters', JSON.stringify(payload));
+}
+
+function restoreFilters() {
+  const raw = localStorage.getItem('hermes-search-filters');
+  if (!raw) return;
+
+  try {
+    const payload = JSON.parse(raw);
+    formIds().forEach(id => {
+      if (payload[id] !== undefined) document.getElementById(id).value = payload[id];
+    });
+  } catch (_) {}
+}
+
+function updateLoading(loading) {
+  state.loading = loading;
+  document.getElementById('searchBtn').disabled = loading;
+  document.getElementById('prevBtn').disabled = loading || state.page === 0;
+  document.getElementById('nextBtn').disabled = loading || state.page >= Math.max(state.totalPages - 1, 0);
+  document.getElementById('status').textContent = loading ? 'Buscando vagas...' : document.getElementById('status').textContent;
+}
+
+function buildPayload() {
+  return {
+    keyword: document.getElementById('keyword').value,
+    language: document.getElementById('language').value,
+    framework: document.getElementById('framework').value,
+    location: document.getElementById('location').value,
+    stacks: document.getElementById('stack').value ? [document.getElementById('stack').value] : [],
+    seniorities: document.getElementById('seniority').value ? [document.getElementById('seniority').value] : [],
+    areas: document.getElementById('area').value ? [document.getElementById('area').value] : [],
+    workModes: document.getElementById('workMode').value ? [document.getElementById('workMode').value] : []
+  };
 }
 
 function fillSelect(id, options) {
@@ -91,25 +146,28 @@ function fillSelect(id, options) {
   });
 }
 
-async function search() {
-  const payload = {
-    keyword: document.getElementById('keyword').value,
-    language: document.getElementById('language').value,
-    framework: document.getElementById('framework').value,
-    location: document.getElementById('location').value,
-    stacks: document.getElementById('stack').value ? [document.getElementById('stack').value] : [],
-    seniorities: document.getElementById('seniority').value ? [document.getElementById('seniority').value] : [],
-    areas: document.getElementById('area').value ? [document.getElementById('area').value] : [],
-    workModes: document.getElementById('workMode').value ? [document.getElementById('workMode').value] : []
-  };
+async function loadOptions() {
+  try {
+    const r = await fetch('/api/search/options');
+    if (!r.ok) throw new Error('Falha ao carregar filtros.');
 
-  const r = await fetch('/api/search/filters?page=0&size=25', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+    const data = await r.json();
+    fillSelect('seniority', data.seniorities || []);
+    fillSelect('area', data.areas || []);
+    fillSelect('language', data.languages || []);
+    fillSelect('framework', data.frameworks || []);
+  } catch (e) {
+    document.getElementById('status').innerHTML = '<span class="error">' + e.message + '</span>';
+  }
+}
 
-  const data = await r.json();
+function renderPageInfo() {
+  const current = state.page + 1;
+  const total = Math.max(state.totalPages, 1);
+  document.getElementById('pageInfo').textContent = `Página ${current} de ${total} • ${state.totalElements} vagas`;
+}
+
+function renderResults(data) {
   const results = document.getElementById('results');
   results.innerHTML = '';
 
@@ -120,7 +178,7 @@ async function search() {
       <strong>${job.title || 'Sem título'}</strong>
       <div class="meta">${job.empresa || '-'} • ${job.location || '-'} • ${job.seniority || '-'}</div>
       <div class="meta">Stack: ${job.stacks || '-'}</div>
-      <a href="${job.url}" target="_blank">Candidatar</a>
+      <a href="${job.url}" target="_blank" rel="noopener noreferrer">Candidatar</a>
     `;
     results.appendChild(div);
   });
@@ -130,8 +188,65 @@ async function search() {
   }
 }
 
-document.getElementById('searchBtn').addEventListener('click', search);
+async function search(page = 0) {
+  saveFilters();
+  state.page = page;
+  updateLoading(true);
+
+  try {
+    const payload = buildPayload();
+    const r = await fetch(`/api/search/filters?page=${state.page}&size=${state.size}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!r.ok) throw new Error('Não foi possível buscar vagas agora.');
+
+    const data = await r.json();
+    state.totalPages = data.totalPages || 0;
+    state.totalElements = data.totalElements || 0;
+    renderResults(data);
+
+    if (state.totalElements > 0) {
+      document.getElementById('status').textContent = 'Busca concluída.';
+    } else {
+      document.getElementById('status').textContent = 'Nenhuma vaga encontrada.';
+    }
+
+    renderPageInfo();
+  } catch (e) {
+    document.getElementById('status').innerHTML = '<span class="error">' + e.message + '</span>';
+  } finally {
+    updateLoading(false);
+  }
+}
+
+function clearFilters() {
+  formIds().forEach(id => document.getElementById(id).value = '');
+  localStorage.removeItem('hermes-search-filters');
+  state.page = 0;
+  state.totalPages = 0;
+  state.totalElements = 0;
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('status').textContent = 'Filtros limpos. Faça uma nova busca.';
+  renderPageInfo();
+  updateLoading(false);
+}
+
+document.getElementById('searchBtn').addEventListener('click', () => search(0));
+document.getElementById('clearBtn').addEventListener('click', clearFilters);
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (state.page > 0) search(state.page - 1);
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  if (state.page < state.totalPages - 1) search(state.page + 1);
+});
+
+restoreFilters();
 loadOptions();
+renderPageInfo();
+updateLoading(false);
 </script>
 </body>
 </html>
