@@ -3,15 +3,19 @@ package com.hermes.jobs.search;
 import com.hermes.jobs.job.JobEntity;
 import com.hermes.jobs.job.JobRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SearchService {
 
     private static final int CANDIDATE_LIMIT = 500;
@@ -19,6 +23,7 @@ public class SearchService {
 
     private final JobRepository repository;
     private final QuerySynonymCatalog synonymCatalog;
+    private final RankingProperties rankingProperties;
 
     public Page<JobEntity> search(String query, Pageable pageable) {
         SearchCriteria criteria = QueryParser.parse(query, synonymCatalog);
@@ -35,9 +40,15 @@ public class SearchService {
 
         List<JobEntity> ranked = repository.findAll(JobSearchSpecifications.from(criteria), candidatePage)
                 .stream()
-                .map(job -> new ScoredJob(job, score(job, criteria)))
+                .map(job -> {
+                    int heuristicScore = score(job, criteria);
+                    RankingFeatures f = buildFeatures(job, criteria, heuristicScore);
+                    double rerankScore = rerank(f);
+                    maybeLogFeatures(job, f, rerankScore);
+                    return new ScoredJob(job, rerankScore);
+                })
                 .filter(scored -> scored.score() > 0)
-                .sorted((a, b) -> Integer.compare(b.score(), a.score()))
+                .sorted((a, b) -> Double.compare(b.score(), a.score()))
                 .map(ScoredJob::job)
                 .toList();
 
@@ -49,6 +60,67 @@ public class SearchService {
         }
 
         return new PageImpl<>(ranked.subList(start, end), pageable, ranked.size());
+    }
+
+    private void maybeLogFeatures(JobEntity job, RankingFeatures f, double rerankScore) {
+        if (!rankingProperties.isFeatureLoggingEnabled())
+            return;
+
+        log.info("[ranking] traceId={} title='{}' heuristic={} titleHits={} descHits={} stackHits={} seniorityMatch={} freshnessDays={} rerank={}",
+                job.getIngestionTraceId(), job.getTitle(), f.heuristicScore(), f.titleHits(), f.descriptionHits(),
+                f.stackHits(), f.seniorityMatch(), f.freshnessDays(), rerankScore);
+    }
+
+    private RankingFeatures buildFeatures(JobEntity job, SearchCriteria c, int heuristicScore) {
+        String title = normalize(job.getTitle());
+        String description = normalize(job.getDescription());
+        String stacks = normalize(job.getStacks());
+        String seniority = normalize(job.getSeniority());
+
+        int titleHits = 0;
+        int descriptionHits = 0;
+        int stackHits = 0;
+
+        Set<String> allTokens = new HashSet<>();
+        allTokens.addAll(c.stacks);
+        allTokens.addAll(c.freeTextTerms);
+
+        for (String token : allTokens) {
+            titleHits += countOccurrences(title, token);
+            descriptionHits += countOccurrences(description, token);
+            stackHits += countOccurrences(stacks, token);
+        }
+
+        int seniorityMatch = 0;
+        for (var requested : c.seniorities) {
+            if (seniority.contains(requested.name().toLowerCase(Locale.ROOT))) {
+                seniorityMatch = 1;
+                break;
+            }
+        }
+
+        long freshnessDays = 365;
+        if (job.getColetadoEm() != null) {
+            freshnessDays = Math.max(0, ChronoUnit.DAYS.between(job.getColetadoEm(), OffsetDateTime.now()));
+        }
+
+        return new RankingFeatures(
+                heuristicScore,
+                titleHits,
+                descriptionHits,
+                stackHits,
+                seniorityMatch,
+                freshnessDays
+        );
+    }
+
+    private double rerank(RankingFeatures f) {
+        return (f.heuristicScore() * rankingProperties.getWeightHeuristic())
+                + (f.titleHits() * rankingProperties.getWeightTitleHits())
+                + (f.descriptionHits() * rankingProperties.getWeightDescriptionHits())
+                + (f.stackHits() * rankingProperties.getWeightStackHits())
+                + (f.seniorityMatch() * rankingProperties.getWeightSeniorityMatch())
+                - (f.freshnessDays() * rankingProperties.getWeightFreshnessDays());
     }
 
     private int score(JobEntity job, SearchCriteria c) {
@@ -154,6 +226,16 @@ public class SearchService {
         return text.contains(token.toLowerCase(Locale.ROOT));
     }
 
-    private record ScoredJob(JobEntity job, int score) {
+    record RankingFeatures(
+            int heuristicScore,
+            int titleHits,
+            int descriptionHits,
+            int stackHits,
+            int seniorityMatch,
+            long freshnessDays
+    ) {
+    }
+
+    private record ScoredJob(JobEntity job, double score) {
     }
 }

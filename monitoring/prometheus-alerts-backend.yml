@@ -1,0 +1,29 @@
+groups:
+  - name: hermes-jobs-alerts
+    rules:
+      - alert: JobsApiDown
+        expr: up{job="hermes-jobs"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hermes Jobs API indisponível"
+          description: "O target de scrape do serviço jobs está fora por mais de 3 minutos."
+
+      - alert: JobsSearch5xxHigh
+        expr: increase(http_server_requests_seconds_count{job="hermes-jobs",uri="/api/v1/search/filters",status=~"5.."}[10m]) >= 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Erros 5xx elevados em /api/v1/search/filters"
+          description: "A API de busca estruturada está apresentando erro 5xx acima do limiar."
+
+      - alert: JobsHighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job="hermes-jobs",uri="/api/v1/search/filters"}[5m])) by (le)) > 1.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latência p95 alta na busca"
+          description: "A latência p95 de /api/v1/search/filters passou de 1.2s por 10 minutos."
