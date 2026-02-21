@@ -28,7 +28,12 @@ Orientar resposta rápida para incidentes de ingestão/search usando métricas d
 2. Correlacionar com traces (`traceparent`) de requisições recentes.
 3. Verificar disponibilidade de banco e logs do serviço jobs.
 
-### 4) `JobsHighLatencyP95`
+### 4) `JobsImportRejectedBySourceHigh`
+1. Verificar `hermes_jobs_import_rejected_by_source_total` por `source`, `source_type` e `reason`.
+2. Correlacionar com `hermes_consumer_imported_by_source_total` para detectar degradação upstream.
+3. Validar parser/config da fonte e payload recebido no endpoint de import.
+
+### 5) `JobsHighLatencyP95`
 1. Comparar p95 com taxa de requests.
 2. Validar uso de CPU/memória e volume de dataset.
 3. Ajustar paginação/filtros e avaliar tuning do ranking.

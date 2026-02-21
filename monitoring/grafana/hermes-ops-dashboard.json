@@ -2,7 +2,7 @@
   "title": "Hermes Ops - Ingestion + Search",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "panels": [
     {
@@ -78,6 +78,36 @@
         "w": 24,
         "x": 0,
         "y": 16
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs Rejected Imports by Source",
+      "targets": [
+        {
+          "expr": "sum by (source, source_type, reason) (rate(hermes_jobs_import_rejected_by_source_total[5m]))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer Imported by Source",
+      "targets": [
+        {
+          "expr": "sum by (source, source_type) (rate(hermes_consumer_imported_by_source_total[5m]))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
       }
     }
   ]

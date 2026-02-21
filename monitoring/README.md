@@ -18,3 +18,8 @@ docker compose -f docker-compose.observability.yml up -d
 - `stack/tempo.yaml`
 - alertas backend: `prometheus-alerts-backend.yml`
 - alertas crawler: `../crawler/crawler/monitoring/prometheus-alerts.yml`
+
+
+## Grafana provisioning automático
+- Datasources provisionadas: `stack/grafana-provisioning/datasources/datasources.yml`
+- Dashboard provider: `stack/grafana-provisioning/dashboards/dashboards.yml`
