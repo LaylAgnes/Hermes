@@ -1,0 +1,33 @@
+{{- if .Values.alertmanager.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes-alertmanager
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.alertmanager.replicas }}
+  selector:
+    matchLabels:
+      app: hermes-alertmanager
+  template:
+    metadata:
+      labels:
+        app: hermes-alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: {{ .Values.alertmanager.image }}
+          args: ["--config.file=/etc/alertmanager/alertmanager.yml", "--config.expand-env"]
+          envFrom:
+            - secretRef:
+                name: {{ .Values.alertmanager.secretName }}
+          ports:
+            - containerPort: 9093
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.alertmanager.configMapName }}
+{{- end }}

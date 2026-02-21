@@ -36,3 +36,20 @@ groups:
         annotations:
           summary: "Rejeição de import elevada por source"
           description: "A API rejeitou muitas vagas de uma mesma source na janela de 15 minutos."
+
+  - name: hermes-quality-sli
+    rules:
+      - record: hermes_quality_source_acceptance_rate_15m
+        expr: |
+          sum by (source, source_type) (increase(hermes_jobs_import_by_source_total[15m]))
+          /
+          clamp_min(sum by (source, source_type) (increase(hermes_consumer_received_by_source_total[15m])), 1)
+
+      - alert: HermesSourceAcceptanceRateLow
+        expr: hermes_quality_source_acceptance_rate_15m < 0.90
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Acceptance rate baixo por source"
+          description: "A source {{ $labels.source }} ({{ $labels.source_type }}) está com acceptance rate < 90% em 15m."

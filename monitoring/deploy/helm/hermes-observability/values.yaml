@@ -1,0 +1,18 @@
+namespace: observability
+
+alertmanager:
+  enabled: true
+  image: prom/alertmanager:v0.27.0
+  replicas: 1
+  secretName: hermes-alertmanager-secrets
+  configMapName: hermes-alertmanager-config
+
+prometheus:
+  enabled: true
+  image: prom/prometheus:v2.54.1
+  retention: 15d
+
+grafana:
+  enabled: true
+  image: grafana/grafana:11.1.0
+  adminSecretName: hermes-grafana-admin

@@ -2,7 +2,7 @@
   "title": "Hermes Ops - Ingestion + Search",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "panels": [
     {
@@ -108,6 +108,43 @@
         "w": 12,
         "x": 12,
         "y": 24
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Acceptance Rate por Source (15m)",
+      "targets": [
+        {
+          "expr": "hermes_quality_source_acceptance_rate_15m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Recebidos por Source (consumer)",
+      "targets": [
+        {
+          "expr": "sum by (source, source_type) (rate(hermes_consumer_received_by_source_total[5m]))"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
       }
     }
   ]

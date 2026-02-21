@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.alertmanager.configMapName }}
+  namespace: {{ .Values.namespace }}
+data:
+  alertmanager.yml: |
+{{ .Files.Get "files/alertmanager.yml" | indent 4 }}

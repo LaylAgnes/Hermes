@@ -1,48 +1,35 @@
-# Runbook de Observabilidade (Hermes)
+# Runbook de Observabilidade
 
-## Objetivo
-Orientar resposta rápida para incidentes de ingestão/search usando métricas de crawler + backend.
+## Alertmanager
+- URL local: `http://localhost:9093`
+- Rotas:
+  - `severity=critical` => PagerDuty + Slack
+  - `severity=warning` => Slack
+  - fallback => e-mail
 
-## Pré-requisitos de stack
-- Subir stack: `monitoring/stack/docker-compose.observability.yml`.
-- Garantir scrape de `hermes-producer`, `hermes-consumer` e `hermes-jobs`.
+## Fluxo de triagem
+1. Abrir alerta no Alertmanager e coletar labels (`alertname`, `job`, `source`, `source_type`).
+2. Validar painel `Hermes Ops - Ingestion + Search` no Grafana.
+3. Para alertas por source, priorizar:
+   - `hermes_quality_source_acceptance_rate_15m`
+   - `hermes_consumer_received_by_source_total`
+   - `hermes_jobs_import_by_source_total`
+   - `hermes_jobs_import_rejected_by_source_total`
+4. Executar mitigação por tipo:
+   - indisponibilidade da API: rollback/restore imediato.
+   - latência/erro: reduzir carga, investigar regressões e dependências.
+   - quality drop por source: pausar source problemática e acionar owner ATS.
 
-## Dashboards sugeridos
-- **Crawler ingestão**: taxa de publicação, retries, DLQ e disponibilidade por source.
-- **Jobs API**: RPS, 5xx, latência p95 e disponibilidade.
+## Playbook de Quality SLI por ATS
+- **Sinal**: `HermesSourceAcceptanceRateLow`.
+- **Objetivo**: retornar acceptance rate >= 90% em até 30 minutos.
+- **Ações rápidas**:
+  1. Verificar se houve aumento de schema drift na source.
+  2. Inspecionar `reason` em `hermes_jobs_import_rejected_by_source_total`.
+  3. Aplicar patch de parser/normalização ou fallback de campos obrigatórios.
+  4. Reprocessar lote recente para recuperar backlog.
 
-## Alertas e ação imediata
-
-### 1) `ConsumerDown`
-1. Verificar processo do consumer (`npm run consumer`) e conectividade RabbitMQ.
-2. Conferir `/healthz` no `CONSUMER_METRICS_PORT`.
-3. Se reiniciado, observar `hermes_consumer_processing_errors_total` e fila DLQ.
-
-### 2) `ProducerSourceFailuresHigh`
-1. Identificar fonte com falha usando `hermes_producer_source_failures_by_source_total`.
-2. Validar `hermes_producer_source_up{source=...}`.
-3. Desabilitar temporariamente source problemática (se necessário) e abrir correção do parser.
-
-### 3) `JobsSearch5xxHigh`
-1. Confirmar aumento de 5xx em `/api/v1/search/filters`.
-2. Correlacionar com traces (`traceparent`) de requisições recentes.
-3. Verificar disponibilidade de banco e logs do serviço jobs.
-
-### 4) `JobsImportRejectedBySourceHigh`
-1. Verificar `hermes_jobs_import_rejected_by_source_total` por `source`, `source_type` e `reason`.
-2. Correlacionar com `hermes_consumer_imported_by_source_total` para detectar degradação upstream.
-3. Validar parser/config da fonte e payload recebido no endpoint de import.
-
-### 5) `JobsHighLatencyP95`
-1. Comparar p95 com taxa de requests.
-2. Validar uso de CPU/memória e volume de dataset.
-3. Ajustar paginação/filtros e avaliar tuning do ranking.
-
-## Coleta mínima recomendada
-- Scrape Prometheus: `hermes-producer`, `hermes-consumer`, `hermes-jobs`.
-- Retenção mínima: 14 dias para análise de tendência.
-
-
-## Indicadores fim-a-fim por source
-- Ingestão no consumer: `hermes_consumer_imported_by_source_total`, `hermes_consumer_retried_by_source_total`, `hermes_consumer_dlq_by_source_total`.
-- Import no backend: `hermes_jobs_import_by_source_total`, `hermes_jobs_import_rejected_by_source_total`.
+## Pós-incidente
+- Registrar causa raiz e tempo de recuperação.
+- Atualizar limiares/alertas se necessário.
+- Gerar ticket de prevenção (parser robusto, contrato com ATS, testes adicionais).

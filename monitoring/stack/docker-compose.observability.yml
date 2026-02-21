@@ -41,3 +41,21 @@ services:
     depends_on:
       - prometheus
       - tempo
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    environment:
+      - ALERTMANAGER_SLACK_API_URL=${ALERTMANAGER_SLACK_API_URL:-}
+      - ALERTMANAGER_SLACK_CHANNEL=${ALERTMANAGER_SLACK_CHANNEL:-#hermes-alerts}
+      - ALERTMANAGER_PAGERDUTY_ROUTING_KEY=${ALERTMANAGER_PAGERDUTY_ROUTING_KEY:-}
+      - ALERTMANAGER_EMAIL_TO=${ALERTMANAGER_EMAIL_TO:-alerts@example.com}
+      - ALERTMANAGER_EMAIL_FROM=${ALERTMANAGER_EMAIL_FROM:-hermes-observability@example.com}
+      - ALERTMANAGER_SMARTHOST=${ALERTMANAGER_SMARTHOST:-smtp.example.com:587}
+      - ALERTMANAGER_SMTP_USER=${ALERTMANAGER_SMTP_USER:-}
+      - ALERTMANAGER_SMTP_PASSWORD=${ALERTMANAGER_SMTP_PASSWORD:-}
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--config.expand-env"]
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"

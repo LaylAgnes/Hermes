@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hermes-observability
+description: Hermes observability stack for production environments
+type: application
+version: 0.1.0
+appVersion: "1.0"

@@ -23,6 +23,7 @@ const metrics = {
   duplicates: 0,
   invalid: 0,
   processingErrors: 0,
+  receivedBySource: {},
   importedBySource: {},
   retriedBySource: {},
   dlqBySource: {},
@@ -79,8 +80,15 @@ function asPrometheusMetrics() {
     `hermes_consumer_processing_errors_total ${metrics.processingErrors}`,
     '# HELP hermes_consumer_up Sinalização de saúde do consumer (1 saudável, 0 degradado).',
     '# TYPE hermes_consumer_up gauge',
-    `hermes_consumer_up ${metrics.health === 'healthy' ? 1 : 0}`
+    `hermes_consumer_up ${metrics.health === 'healthy' ? 1 : 0}`,
+    '# HELP hermes_consumer_received_by_source_total Total de mensagens recebidas por source.',
+    '# TYPE hermes_consumer_received_by_source_total counter'
   ];
+
+  for (const [key, value] of Object.entries(metrics.receivedBySource)) {
+    const [sourceName, sourceType] = key.split('::');
+    lines.push(`hermes_consumer_received_by_source_total{source="${esc(sourceName)}",source_type="${esc(sourceType)}"} ${value}`);
+  }
 
   for (const [key, value] of Object.entries(metrics.importedBySource)) {
     const [sourceName, sourceType] = key.split('::');
@@ -146,6 +154,7 @@ async function processMessage(channel, msg, idempotency, send = sendJob) {
 
   const wrapped = parseMessage(msg);
   const job = wrapped?.payload ? wrapped.payload : wrapped;
+  incBySource(metrics.receivedBySource, job);
 
   if (!job?.url) {
     metrics.invalid += 1;

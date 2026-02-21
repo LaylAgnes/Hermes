@@ -1,0 +1,5 @@
+namespace: observability-prod
+prometheus:
+  retention: 30d
+alertmanager:
+  replicas: 2

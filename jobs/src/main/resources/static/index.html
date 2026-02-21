@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+<a class="skip-link" href="#results">Pular para resultados</a>
 <div class="container">
-  <h1>Buscador de vagas Hermes</h1>
+  <h1 id="mainTitle">Buscador de vagas Hermes</h1>
   <p>Filtre por senioridade, área, stack, linguagem, framework e localização.</p>
 
   <div class="panel">
@@ -66,7 +67,7 @@
   <div class="panel">
     <h3>Resultados</h3>
     <p id="status" class="muted" role="status" aria-live="polite">Use os filtros e clique em buscar.</p>
-    <div id="results" role="region" aria-label="Resultados da busca"></div>
+    <div id="results" role="region" tabindex="-1" aria-label="Resultados da busca"></div>
     <div class="pager">
       <button id="prevBtn" type="button" class="secondary">Anterior</button>
       <span id="pageInfo" class="muted">Página 1</span>
