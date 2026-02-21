@@ -1,0 +1,42 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${ALERTMANAGER_SLACK_API_URL}'
+
+route:
+  receiver: 'default-email'
+  group_by: ['alertname', 'job', 'source', 'source_type']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: 'pagerduty-critical'
+      continue: true
+    - matchers:
+        - severity=~"warning|critical"
+      receiver: 'slack-ops'
+
+receivers:
+  - name: 'default-email'
+    email_configs:
+      - to: '${ALERTMANAGER_EMAIL_TO}'
+        from: '${ALERTMANAGER_EMAIL_FROM}'
+        smarthost: '${ALERTMANAGER_SMARTHOST}'
+        auth_username: '${ALERTMANAGER_SMTP_USER}'
+        auth_password: '${ALERTMANAGER_SMTP_PASSWORD}'
+        send_resolved: true
+
+  - name: 'slack-ops'
+    slack_configs:
+      - channel: '${ALERTMANAGER_SLACK_CHANNEL}'
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+        text: '{{ .CommonAnnotations.summary }}\n{{ .CommonAnnotations.description }}'
+
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - routing_key: '${ALERTMANAGER_PAGERDUTY_ROUTING_KEY}'
+        severity: '{{ .CommonLabels.severity }}'
+        description: '{{ .CommonAnnotations.summary }}'
+        send_resolved: true

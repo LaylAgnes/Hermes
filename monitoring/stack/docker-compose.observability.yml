@@ -1,0 +1,61 @@
+version: '3.9'
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.101.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "3200:3200"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../prometheus-alerts-backend.yml:/etc/prometheus/alerts-backend.yml:ro
+      - ../../crawler/crawler/monitoring/prometheus-alerts.yml:/etc/prometheus/alerts-crawler.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../grafana/hermes-ops-dashboard.json:/var/lib/grafana/dashboards/hermes-ops-dashboard.json:ro
+      - ./grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - prometheus
+      - tempo
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    environment:
+      - ALERTMANAGER_SLACK_API_URL=${ALERTMANAGER_SLACK_API_URL:-}
+      - ALERTMANAGER_SLACK_CHANNEL=${ALERTMANAGER_SLACK_CHANNEL:-#hermes-alerts}
+      - ALERTMANAGER_PAGERDUTY_ROUTING_KEY=${ALERTMANAGER_PAGERDUTY_ROUTING_KEY:-}
+      - ALERTMANAGER_EMAIL_TO=${ALERTMANAGER_EMAIL_TO:-alerts@example.com}
+      - ALERTMANAGER_EMAIL_FROM=${ALERTMANAGER_EMAIL_FROM:-hermes-observability@example.com}
+      - ALERTMANAGER_SMARTHOST=${ALERTMANAGER_SMARTHOST:-smtp.example.com:587}
+      - ALERTMANAGER_SMTP_USER=${ALERTMANAGER_SMTP_USER:-}
+      - ALERTMANAGER_SMTP_PASSWORD=${ALERTMANAGER_SMTP_PASSWORD:-}
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--config.expand-env"]
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
