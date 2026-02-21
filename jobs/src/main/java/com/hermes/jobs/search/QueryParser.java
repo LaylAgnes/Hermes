@@ -12,52 +12,13 @@ public class QueryParser {
             "de", "da", "do", "das", "dos", "a", "o", "e", "para", "com", "em", "na", "no"
     );
 
-    private static final Map<String, Seniority> SENIORITY_MAP = Map.ofEntries(
-            Map.entry("estagio", Seniority.INTERN),
-            Map.entry("estagiario", Seniority.INTERN),
-            Map.entry("intern", Seniority.INTERN),
-            Map.entry("trainee", Seniority.TRAINEE),
-            Map.entry("junior", Seniority.JUNIOR),
-            Map.entry("jr", Seniority.JUNIOR),
-            Map.entry("pleno", Seniority.MID),
-            Map.entry("mid", Seniority.MID),
-            Map.entry("middle", Seniority.MID),
-            Map.entry("senior", Seniority.SENIOR),
-            Map.entry("sr", Seniority.SENIOR),
-            Map.entry("staff", Seniority.STAFF),
-            Map.entry("lead", Seniority.LEAD),
-            Map.entry("principal", Seniority.PRINCIPAL),
-            Map.entry("manager", Seniority.MANAGER)
-    );
-
-    private static final Map<String, Area> AREA_MAP = Map.ofEntries(
-            Map.entry("backend", Area.BACKEND),
-            Map.entry("frontend", Area.FRONTEND),
-            Map.entry("fullstack", Area.FULLSTACK),
-            Map.entry("full-stack", Area.FULLSTACK),
-            Map.entry("mobile", Area.MOBILE),
-            Map.entry("dados", Area.DATA),
-            Map.entry("data", Area.DATA),
-            Map.entry("devops", Area.DEVOPS),
-            Map.entry("qa", Area.QA),
-            Map.entry("security", Area.SECURITY),
-            Map.entry("seguranca", Area.SECURITY)
-    );
-
-    private static final Set<String> STACKS = Set.of(
-            "java", "spring", "node", "nodejs", "react", "angular", "vue", "python", "django",
-            "flask", "php", "laravel", "golang", "go", "c#", ".net", "dotnet", "kotlin", "swift",
-            "typescript", "javascript", "postgres", "postgresql", "mysql", "mongodb", "redis",
-            "docker", "kubernetes", "aws", "gcp", "azure", "terraform", "ruby", "rails"
-    );
-
-    private static final Set<String> LOCATION_TERMS = Set.of(
-            "brasil", "brazil", "portugal", "europe", "latam", "usa", "canada", "argentina", "mexico"
-    );
-
-    public static SearchCriteria parse(String query) {
+    public static SearchCriteria parse(String query, QuerySynonymCatalog catalog) {
 
         String normalized = normalize(query);
+        Map<String, Seniority> seniorityMap = catalog.seniorityMap();
+        Map<String, Area> areaMap = catalog.areaMap();
+        Set<String> stacks = catalog.stacksSet();
+        Set<String> locationTerms = catalog.locationTermsSet();
 
         SearchCriteria c = new SearchCriteria();
         c.rawText = normalized;
@@ -73,19 +34,19 @@ public class QueryParser {
         if (normalized.contains("presencial") || normalized.contains("onsite") || normalized.contains("on-site"))
             c.workModes.add("onsite");
 
-        for (var entry : SENIORITY_MAP.entrySet())
+        for (var entry : seniorityMap.entrySet())
             if (containsToken(normalized, entry.getKey()))
                 c.seniorities.add(entry.getValue());
 
-        for (var entry : AREA_MAP.entrySet())
+        for (var entry : areaMap.entrySet())
             if (containsToken(normalized, entry.getKey()))
                 c.areas.add(entry.getValue());
 
-        for (String stack : STACKS)
+        for (String stack : stacks)
             if (containsToken(normalized, stack))
                 c.stacks.add(stack.equals("dotnet") ? ".net" : stack);
 
-        for (String location : LOCATION_TERMS)
+        for (String location : locationTerms)
             if (containsToken(normalized, location))
                 c.locationTerms.add(location);
 
@@ -96,10 +57,10 @@ public class QueryParser {
             if (token.isBlank() || STOP_WORDS.contains(token))
                 continue;
 
-            if (!STACKS.contains(token)
-                    && !SENIORITY_MAP.containsKey(token)
-                    && !AREA_MAP.containsKey(token)
-                    && !LOCATION_TERMS.contains(token)
+            if (!stacks.contains(token)
+                    && !seniorityMap.containsKey(token)
+                    && !areaMap.containsKey(token)
+                    && !locationTerms.contains(token)
                     && !token.equals("remote")
                     && !token.equals("remoto")
                     && !token.equals("hibrido")

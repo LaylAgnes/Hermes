@@ -4,24 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hermes Jobs Search</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7fb; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-    .grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-    .field { display: flex; flex-direction: column; gap: 6px; }
-    label { font-size: 12px; color: #555; }
-    input, select, button { padding: 10px; border-radius: 8px; border: 1px solid #d2d7e1; }
-    button { background: #1f6feb; color: #fff; border: none; cursor: pointer; }
-    button[disabled] { opacity: .6; cursor: wait; }
-    .actions { display: flex; gap: 8px; }
-    .muted { color: #666; font-size: 13px; }
-    .error { color: #a10000; }
-    .job { padding: 12px; border: 1px solid #e7ebf1; border-radius: 10px; margin-bottom: 10px; background: #fff; }
-    .meta { color: #666; font-size: 13px; margin: 4px 0; }
-    .pager { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-  </style>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <div class="container">
@@ -35,16 +18,19 @@
         <input id="keyword" placeholder="ex: fintech, pagamentos" />
       </div>
       <div class="field">
+        <label>Stacks (enter para adicionar)</label>
+        <input id="stack" placeholder="ex: java, react" />
+        <div id="stackChips" class="chips"></div>
+      </div>
+      <div class="field">
         <label>Senioridade</label>
-        <select id="seniority"><option value="">Todas</option></select>
+        <select id="seniority"><option value="">Adicionar...</option></select>
+        <div id="seniorityChips" class="chips"></div>
       </div>
       <div class="field">
         <label>Área</label>
-        <select id="area"><option value="">Todas</option></select>
-      </div>
-      <div class="field">
-        <label>Stack principal</label>
-        <input id="stack" placeholder="ex: java, react" />
+        <select id="area"><option value="">Adicionar...</option></select>
+        <div id="areaChips" class="chips"></div>
       </div>
       <div class="field">
         <label>Linguagem</label>
@@ -56,17 +42,22 @@
       </div>
       <div class="field">
         <label>Modelo de trabalho</label>
-        <select id="workMode"><option value="">Todos</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
+        <select id="workMode"><option value="">Adicionar...</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
+        <div id="workModeChips" class="chips"></div>
       </div>
       <div class="field">
         <label>Localização</label>
         <input id="location" placeholder="ex: brasil, portugal" />
       </div>
-      <div class="field" style="justify-content:end">
-        <label>&nbsp;</label>
+      <div class="field">
+        <label>Ordenação</label>
+        <select id="sort"><option value="coletadoEm,desc">Mais recentes</option><option value="title,asc">Título (A-Z)</option><option value="empresa,asc">Empresa (A-Z)</option></select>
+      </div>
+      <div class="field full-width">
         <div class="actions">
           <button id="searchBtn">Buscar vagas</button>
-          <button id="clearBtn" type="button" style="background:#6b7280">Limpar</button>
+          <button id="shareBtn" type="button" class="secondary">Compartilhar busca</button>
+          <button id="clearBtn" type="button" class="secondary">Limpar</button>
         </div>
       </div>
     </div>
@@ -77,176 +68,20 @@
     <p id="status" class="muted">Use os filtros e clique em buscar.</p>
     <div id="results"></div>
     <div class="pager">
-      <button id="prevBtn" type="button" style="background:#4b5563">Anterior</button>
+      <button id="prevBtn" type="button" class="secondary">Anterior</button>
       <span id="pageInfo" class="muted">Página 1</span>
-      <button id="nextBtn" type="button" style="background:#4b5563">Próxima</button>
+      <button id="nextBtn" type="button" class="secondary">Próxima</button>
     </div>
   </div>
+
+  <dialog id="jobDetails">
+    <h3 id="detailTitle"></h3>
+    <p id="detailMeta" class="muted"></p>
+    <p id="detailDescription"></p>
+    <a id="detailUrl" target="_blank" rel="noopener noreferrer">Abrir vaga</a>
+    <form method="dialog"><button class="secondary" style="margin-top:10px">Fechar</button></form>
+  </dialog>
 </div>
-
-<script>
-const state = {
-  page: 0,
-  size: 20,
-  totalPages: 0,
-  totalElements: 0,
-  loading: false
-};
-
-function formIds() {
-  return ['keyword', 'seniority', 'area', 'stack', 'language', 'framework', 'workMode', 'location'];
-}
-
-function saveFilters() {
-  const payload = {};
-  formIds().forEach(id => payload[id] = document.getElementById(id).value || '');
-  localStorage.setItem('hermes-search-filters', JSON.stringify(payload));
-}
-
-function restoreFilters() {
-  const raw = localStorage.getItem('hermes-search-filters');
-  if (!raw) return;
-
-  try {
-    const payload = JSON.parse(raw);
-    formIds().forEach(id => {
-      if (payload[id] !== undefined) document.getElementById(id).value = payload[id];
-    });
-  } catch (_) {}
-}
-
-function updateLoading(loading) {
-  state.loading = loading;
-  document.getElementById('searchBtn').disabled = loading;
-  document.getElementById('prevBtn').disabled = loading || state.page === 0;
-  document.getElementById('nextBtn').disabled = loading || state.page >= Math.max(state.totalPages - 1, 0);
-  document.getElementById('status').textContent = loading ? 'Buscando vagas...' : document.getElementById('status').textContent;
-}
-
-function buildPayload() {
-  return {
-    keyword: document.getElementById('keyword').value,
-    language: document.getElementById('language').value,
-    framework: document.getElementById('framework').value,
-    location: document.getElementById('location').value,
-    stacks: document.getElementById('stack').value ? [document.getElementById('stack').value] : [],
-    seniorities: document.getElementById('seniority').value ? [document.getElementById('seniority').value] : [],
-    areas: document.getElementById('area').value ? [document.getElementById('area').value] : [],
-    workModes: document.getElementById('workMode').value ? [document.getElementById('workMode').value] : []
-  };
-}
-
-function fillSelect(id, options) {
-  const select = document.getElementById(id);
-  options.forEach(option => {
-    const el = document.createElement('option');
-    el.value = option;
-    el.textContent = option;
-    select.appendChild(el);
-  });
-}
-
-async function loadOptions() {
-  try {
-    const r = await fetch('/api/search/options');
-    if (!r.ok) throw new Error('Falha ao carregar filtros.');
-
-    const data = await r.json();
-    fillSelect('seniority', data.seniorities || []);
-    fillSelect('area', data.areas || []);
-    fillSelect('language', data.languages || []);
-    fillSelect('framework', data.frameworks || []);
-  } catch (e) {
-    document.getElementById('status').innerHTML = '<span class="error">' + e.message + '</span>';
-  }
-}
-
-function renderPageInfo() {
-  const current = state.page + 1;
-  const total = Math.max(state.totalPages, 1);
-  document.getElementById('pageInfo').textContent = `Página ${current} de ${total} • ${state.totalElements} vagas`;
-}
-
-function renderResults(data) {
-  const results = document.getElementById('results');
-  results.innerHTML = '';
-
-  (data.content || []).forEach(job => {
-    const div = document.createElement('div');
-    div.className = 'job';
-    div.innerHTML = `
-      <strong>${job.title || 'Sem título'}</strong>
-      <div class="meta">${job.empresa || '-'} • ${job.location || '-'} • ${job.seniority || '-'}</div>
-      <div class="meta">Stack: ${job.stacks || '-'}</div>
-      <a href="${job.url}" target="_blank" rel="noopener noreferrer">Candidatar</a>
-    `;
-    results.appendChild(div);
-  });
-
-  if (!data.content || data.content.length === 0) {
-    results.innerHTML = '<p>Nenhuma vaga encontrada com esses filtros.</p>';
-  }
-}
-
-async function search(page = 0) {
-  saveFilters();
-  state.page = page;
-  updateLoading(true);
-
-  try {
-    const payload = buildPayload();
-    const r = await fetch(`/api/search/filters?page=${state.page}&size=${state.size}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!r.ok) throw new Error('Não foi possível buscar vagas agora.');
-
-    const data = await r.json();
-    state.totalPages = data.totalPages || 0;
-    state.totalElements = data.totalElements || 0;
-    renderResults(data);
-
-    if (state.totalElements > 0) {
-      document.getElementById('status').textContent = 'Busca concluída.';
-    } else {
-      document.getElementById('status').textContent = 'Nenhuma vaga encontrada.';
-    }
-
-    renderPageInfo();
-  } catch (e) {
-    document.getElementById('status').innerHTML = '<span class="error">' + e.message + '</span>';
-  } finally {
-    updateLoading(false);
-  }
-}
-
-function clearFilters() {
-  formIds().forEach(id => document.getElementById(id).value = '');
-  localStorage.removeItem('hermes-search-filters');
-  state.page = 0;
-  state.totalPages = 0;
-  state.totalElements = 0;
-  document.getElementById('results').innerHTML = '';
-  document.getElementById('status').textContent = 'Filtros limpos. Faça uma nova busca.';
-  renderPageInfo();
-  updateLoading(false);
-}
-
-document.getElementById('searchBtn').addEventListener('click', () => search(0));
-document.getElementById('clearBtn').addEventListener('click', clearFilters);
-document.getElementById('prevBtn').addEventListener('click', () => {
-  if (state.page > 0) search(state.page - 1);
-});
-document.getElementById('nextBtn').addEventListener('click', () => {
-  if (state.page < state.totalPages - 1) search(state.page + 1);
-});
-
-restoreFilters();
-loadOptions();
-renderPageInfo();
-updateLoading(false);
-</script>
+<script src="/app.js"></script>
 </body>
 </html>
