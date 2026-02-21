@@ -35,19 +35,30 @@ class IngestionSearchFlowTests {
     }
 
     @Test
-    void shouldImportAndSearchThroughVersionedFiltersEndpoint() throws Exception {
+    void shouldImportFromCrawlerPayloadAndReturnRankedVersionedSearchResults() throws Exception {
         Map<String, Object> importPayload = Map.of(
                 "jobs", java.util.List.of(
                         Map.of(
                                 "url", "https://jobs.lever.co/acme/123",
                                 "title", "Senior Backend Engineer",
                                 "location", "Brazil",
-                                "description", "Strong Java and Spring experience for backend platform.",
+                                "description", "Strong Java and Spring experience for backend platform and microservices.",
                                 "sourceType", "lever",
                                 "sourceName", "acme-lever",
                                 "confidence", 0.93,
-                                "parserVersion", "v3",
+                                "parserVersion", "v4",
                                 "ingestionTraceId", "trace-e2e-1"
+                        ),
+                        Map.of(
+                                "url", "https://jobs.lever.co/acme/456",
+                                "title", "Frontend Engineer",
+                                "location", "Brazil",
+                                "description", "React and TypeScript role.",
+                                "sourceType", "lever",
+                                "sourceName", "acme-lever",
+                                "confidence", 0.82,
+                                "parserVersion", "v4",
+                                "ingestionTraceId", "trace-e2e-2"
                         )
                 )
         );
@@ -56,7 +67,7 @@ class IngestionSearchFlowTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(importPayload)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(1));
+                .andExpect(jsonPath("$").value(2));
 
         Map<String, Object> searchPayload = Map.of(
                 "stacks", java.util.List.of("java"),
@@ -65,7 +76,7 @@ class IngestionSearchFlowTests {
                 "workModes", java.util.List.of(),
                 "language", "java",
                 "framework", "spring",
-                "keyword", "backend",
+                "keyword", "backend microservices",
                 "location", "brazil"
         );
 
@@ -75,6 +86,7 @@ class IngestionSearchFlowTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].title").value("Senior Backend Engineer"))
                 .andExpect(jsonPath("$.content[0].sourceType").value("lever"))
-                .andExpect(jsonPath("$.content[0].parserVersion").value("v3"));
+                .andExpect(jsonPath("$.content[0].parserVersion").value("v4"))
+                .andExpect(jsonPath("$.content[0].ingestionTraceId").value("trace-e2e-1"));
     }
 }

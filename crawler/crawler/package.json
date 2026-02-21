@@ -4,6 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "producer": "node producer.js",
+    "consumer": "node consumer.js",
+    "replay": "node replay-dlq.js",
     "test": "node -e \"console.log('no tests')\""
   },
   "keywords": [],
@@ -11,6 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "amqplib": "^0.10.8",
     "axios": "^1.13.5",
     "playwright": "^1.58.2"
   }
