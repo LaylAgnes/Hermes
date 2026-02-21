@@ -17,3 +17,7 @@
 
 ## Contratos
 - `docs/api/openapi-v1.yaml`: contrato oficial da versão v1.
+
+
+## Testes de compatibilidade interversão
+- `InterversionCompatibilityTests` valida equivalência entre alias (`/api/search`) e rotas versionadas (`/api/v1/search`) para opções e filtros.

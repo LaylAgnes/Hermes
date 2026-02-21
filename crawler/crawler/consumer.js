@@ -23,9 +23,36 @@ const metrics = {
   duplicates: 0,
   invalid: 0,
   processingErrors: 0,
+  importedBySource: {},
+  retriedBySource: {},
+  dlqBySource: {},
   health: 'starting',
   lastProcessedAt: null
 };
+
+function esc(value) {
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/"/g, '\\"');
+}
+
+function sourceFromJob(job = {}) {
+  return {
+    sourceName: job.sourceName || 'unknown',
+    sourceType: job.sourceType || 'unknown'
+  };
+}
+
+function sourceKey(job = {}) {
+  const source = sourceFromJob(job);
+  return `${source.sourceName}::${source.sourceType}`;
+}
+
+function incBySource(map, job) {
+  const key = sourceKey(job);
+  map[key] = (map[key] || 0) + 1;
+}
 
 function asPrometheusMetrics() {
   const lines = [
@@ -54,6 +81,21 @@ function asPrometheusMetrics() {
     '# TYPE hermes_consumer_up gauge',
     `hermes_consumer_up ${metrics.health === 'healthy' ? 1 : 0}`
   ];
+
+  for (const [key, value] of Object.entries(metrics.importedBySource)) {
+    const [sourceName, sourceType] = key.split('::');
+    lines.push(`hermes_consumer_imported_by_source_total{source="${esc(sourceName)}",source_type="${esc(sourceType)}"} ${value}`);
+  }
+
+  for (const [key, value] of Object.entries(metrics.retriedBySource)) {
+    const [sourceName, sourceType] = key.split('::');
+    lines.push(`hermes_consumer_retried_by_source_total{source="${esc(sourceName)}",source_type="${esc(sourceType)}"} ${value}`);
+  }
+
+  for (const [key, value] of Object.entries(metrics.dlqBySource)) {
+    const [sourceName, sourceType] = key.split('::');
+    lines.push(`hermes_consumer_dlq_by_source_total{source="${esc(sourceName)}",source_type="${esc(sourceType)}"} ${value}`);
+  }
 
   return `${lines.join('\n')}\n`;
 }
@@ -129,17 +171,20 @@ async function processMessage(channel, msg, idempotency, send = sendJob) {
 
     await send(job, trace);
     metrics.imported += 1;
+    incBySource(metrics.importedBySource, job);
     channel.ack(msg);
   } catch (error) {
     if (retryCount < API_RETRIES) {
       await publishJob(channel, { ...job, retryCount: retryCount + 1 });
       metrics.retried += 1;
+      incBySource(metrics.retriedBySource, job);
       channel.ack(msg);
       return;
     }
 
     await publishDlq(channel, job, error.message, retryCount);
     metrics.sentToDlq += 1;
+    incBySource(metrics.dlqBySource, job);
     channel.ack(msg);
   }
 }

@@ -91,9 +91,26 @@ Há um conjunto inicial de alertas em `monitoring/prometheus-alerts.yml` cobrind
 
 As métricas de producer agora incluem disponibilidade e sucesso por source (`hermes_producer_source_up`, `hermes_producer_source_success_total`, `hermes_producer_source_jobs_collected_total`).
 
+O consumer também expõe métricas fim-a-fim por source (`hermes_consumer_imported_by_source_total`, `hermes_consumer_retried_by_source_total`, `hermes_consumer_dlq_by_source_total`).
+
 
 ## Operação integrada (crawler + backend)
 
 - Alertas backend: `../monitoring/prometheus-alerts-backend.yml`
 - Dashboard Grafana sugerido: `../monitoring/grafana/hermes-ops-dashboard.json`
 - Runbook operacional: `../monitoring/runbooks/observability.md`
+
+
+## Stack de observabilidade (produção/local)
+
+Suba uma stack mínima (Prometheus + Grafana + Tempo + OTel Collector):
+
+```bash
+cd ../monitoring/stack
+docker compose -f docker-compose.observability.yml up -d
+```
+
+Arquivos principais:
+- `../monitoring/stack/prometheus.yml`
+- `../monitoring/stack/otel-collector-config.yaml`
+- `../monitoring/stack/tempo.yaml`

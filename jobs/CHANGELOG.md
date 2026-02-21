@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0] - 2026-02-21
+### Added
+- Infra de observabilidade em `monitoring/stack` (Prometheus + Grafana + Tempo + OTel Collector).
+- Métricas fim-a-fim por source no consumer e no backend (`hermes_consumer_*_by_source_total`, `hermes_jobs_import_by_source_total`).
+- Testes de compatibilidade interversão entre alias e v1 (`InterversionCompatibilityTests`).
+- Melhorias de frontend: estado de URL versionado, analytics events e atributos de acessibilidade.
+
 ## [1.3.0] - 2026-02-21
 ### Added
 - Hardening operacional de observabilidade com alertas backend (`monitoring/prometheus-alerts-backend.yml`).

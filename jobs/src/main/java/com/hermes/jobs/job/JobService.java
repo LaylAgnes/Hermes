@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class JobService {
 
     private final JobRepository repository;
+    private final ImportMetricsService importMetricsService;
 
     // =========================
     // IMPORTAÇÃO (INDEXADOR DE URL)
@@ -48,9 +49,10 @@ public class JobService {
         for (String url : uniqueUrls) {
 
             Optional<JobEntity> existingOpt = repository.findByUrl(url);
+            JobEntity entity;
 
             if (existingOpt.isPresent()) {
-                JobEntity entity = existingOpt.get();
+                entity = existingOpt.get();
                 entity.setColetadoEm(now);
                 entity.setActive(true);
                 if (entity.getSourceType() == null) entity.setSourceType("url-index");
@@ -58,9 +60,8 @@ public class JobService {
                 if (entity.getConfidence() == null) entity.setConfidence(0.5);
                 if (entity.getParserVersion() == null) entity.setParserVersion("url-index-v1");
                 if (entity.getIngestionTraceId() == null) entity.setIngestionTraceId(java.util.UUID.randomUUID().toString());
-                toSave.add(entity);
             } else {
-                toSave.add(JobEntity.builder()
+                entity = JobEntity.builder()
                         .url(url)
                         .empresa(UrlUtils.extractCompany(url))
                         .domain(UrlUtils.extractDomain(url))
@@ -72,8 +73,11 @@ public class JobService {
                         .ingestionTraceId(java.util.UUID.randomUUID().toString())
                         .coletadoEm(now)
                         .active(true)
-                        .build());
+                        .build();
             }
+
+            toSave.add(entity);
+            importMetricsService.markImported(entity.getSourceName(), entity.getSourceType());
         }
 
         repository.saveAll(toSave);
@@ -113,12 +117,16 @@ public class JobService {
         List<JobEntity> toSave = new ArrayList<>();
 
         for (var doc : request.jobs()) {
-            if (doc == null || doc.url() == null || doc.url().isBlank())
+            if (doc == null || doc.url() == null || doc.url().isBlank()) {
+                importMetricsService.markImportRejected(null, null, "missing_url");
                 continue;
+            }
 
             String normalizedUrl = doc.url().trim();
-            if (!isSupportedUrl(normalizedUrl))
+            if (!isSupportedUrl(normalizedUrl)) {
+                importMetricsService.markImportRejected(doc.sourceName(), doc.sourceType(), "invalid_url");
                 continue;
+            }
 
             JobEntity entity = repository.findByUrl(normalizedUrl)
                     .orElseGet(JobEntity::new);
@@ -165,6 +173,7 @@ public class JobService {
             entity.setActive(true);
 
             toSave.add(entity);
+            importMetricsService.markImported(entity.getSourceName(), entity.getSourceType());
         }
 
         if (toSave.isEmpty())

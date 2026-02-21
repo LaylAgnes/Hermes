@@ -1,3 +1,5 @@
+const URL_STATE_VERSION = '2';
+
 const state = {
   page: 0,
   size: 20,
@@ -11,25 +13,85 @@ function formIds() {
   return ['keyword', 'language', 'framework', 'location', 'sort'];
 }
 
-function saveFilters() {
+function analyticsTrack(eventName, payload = {}) {
+  try {
+    const key = `hermes-analytics-${eventName}`;
+    const count = Number(localStorage.getItem(key) || '0') + 1;
+    localStorage.setItem(key, String(count));
+
+    if (navigator.sendBeacon) {
+      const body = JSON.stringify({ eventName, payload, at: new Date().toISOString() });
+      navigator.sendBeacon('/api/analytics/events', new Blob([body], { type: 'application/json' }));
+    }
+  } catch (_) {}
+}
+
+function currentFilterState() {
   const payload = { chips: state.chips };
   formIds().forEach(id => payload[id] = document.getElementById(id).value || '');
+  return payload;
+}
+
+function toUrlParams(payload) {
+  const p = new URLSearchParams();
+  p.set('v', URL_STATE_VERSION);
+  formIds().forEach(id => {
+    if (payload[id]) p.set(id, payload[id]);
+  });
+  p.set('stacks', (payload.chips?.stacks || []).join(','));
+  p.set('seniorities', (payload.chips?.seniorities || []).join(','));
+  p.set('areas', (payload.chips?.areas || []).join(','));
+  p.set('workModes', (payload.chips?.workModes || []).join(','));
+  return p;
+}
+
+function fromUrlParams(params) {
+  return {
+    keyword: params.get('keyword') || '',
+    language: params.get('language') || '',
+    framework: params.get('framework') || '',
+    location: params.get('location') || '',
+    sort: params.get('sort') || '',
+    chips: {
+      stacks: (params.get('stacks') || '').split(',').map(s => s.trim()).filter(Boolean),
+      seniorities: (params.get('seniorities') || '').split(',').map(s => s.trim()).filter(Boolean),
+      areas: (params.get('areas') || '').split(',').map(s => s.trim()).filter(Boolean),
+      workModes: (params.get('workModes') || '').split(',').map(s => s.trim()).filter(Boolean)
+    }
+  };
+}
+
+function saveFilters() {
+  const payload = currentFilterState();
   localStorage.setItem('hermes-search-filters', JSON.stringify(payload));
+
+  const url = new URL(window.location.href);
+  const params = toUrlParams(payload);
+  url.search = params.toString();
+  window.history.replaceState({}, '', url.toString());
 }
 
 function restoreFilters() {
   const params = new URLSearchParams(window.location.search);
-  const raw = params.get('filters') || localStorage.getItem('hermes-search-filters');
-  if (!raw) return;
+  let payload = null;
 
-  try {
-    const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    formIds().forEach(id => {
-      if (payload[id] !== undefined) document.getElementById(id).value = payload[id];
-    });
-    state.chips = payload.chips || state.chips;
-    renderAllChips();
-  } catch (_) {}
+  if (params.get('v') === URL_STATE_VERSION) {
+    payload = fromUrlParams(params);
+  } else {
+    const raw = params.get('filters') || localStorage.getItem('hermes-search-filters');
+    if (!raw) return;
+    try {
+      payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch (_) {
+      return;
+    }
+  }
+
+  formIds().forEach(id => {
+    if (payload[id] !== undefined) document.getElementById(id).value = payload[id];
+  });
+  state.chips = payload.chips || state.chips;
+  renderAllChips();
 }
 
 function addChip(type, value) {
@@ -52,7 +114,7 @@ function renderChips(type) {
   state.chips[type].forEach(value => {
     const chip = document.createElement('span');
     chip.className = 'chip';
-    chip.innerHTML = `${value}<button type="button">×</button>`;
+    chip.innerHTML = `${value}<button type="button" aria-label="Remover filtro ${value}">×</button>`;
     chip.querySelector('button').addEventListener('click', () => removeChip(type, value));
     target.appendChild(chip);
   });
@@ -122,6 +184,7 @@ function openDetails(job) {
   document.getElementById('detailMeta').textContent = `${job.empresa || '-'} • ${job.location || '-'} • ${job.seniority || '-'} • ${job.sourceType || '-'} • conf: ${job.confidence ?? '-'}`;
   document.getElementById('detailDescription').textContent = job.description || 'Sem descrição';
   document.getElementById('detailUrl').href = job.url;
+  analyticsTrack('open_details', { sourceType: job.sourceType || 'unknown' });
   document.getElementById('jobDetails').showModal();
 }
 
@@ -171,6 +234,7 @@ async function search(page = 0) {
     state.totalElements = data.totalElements || 0;
     renderResults(data);
     document.getElementById('status').textContent = state.totalElements > 0 ? 'Busca concluída.' : 'Nenhuma vaga encontrada.';
+    analyticsTrack('search', { total: state.totalElements });
     renderPageInfo();
   } catch (e) {
     document.getElementById('status').innerHTML = '<span class="error">' + e.message + '</span>';
@@ -189,17 +253,18 @@ function clearFilters() {
   state.totalElements = 0;
   document.getElementById('results').innerHTML = '';
   document.getElementById('status').textContent = 'Filtros limpos. Faça uma nova busca.';
+  analyticsTrack('clear_filters');
   renderPageInfo();
   updateLoading(false);
 }
 
 function shareFilters() {
-  const payload = { chips: state.chips };
-  formIds().forEach(id => payload[id] = document.getElementById(id).value || '');
+  const payload = currentFilterState();
   const url = new URL(window.location.href);
-  url.searchParams.set('filters', JSON.stringify(payload));
+  url.search = toUrlParams(payload).toString();
   navigator.clipboard.writeText(url.toString());
   document.getElementById('status').textContent = 'Link de busca copiado para a área de transferência.';
+  analyticsTrack('share_filters');
 }
 
 document.getElementById('searchBtn').addEventListener('click', () => search(0));

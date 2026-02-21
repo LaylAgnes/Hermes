@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts-backend.yml
+  - /etc/prometheus/alerts-crawler.yml
+
+scrape_configs:
+  - job_name: hermes-producer
+    static_configs:
+      - targets: ["host.docker.internal:9090"]
+
+  - job_name: hermes-consumer
+    static_configs:
+      - targets: ["host.docker.internal:9091"]
+
+  - job_name: hermes-jobs
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8080"]

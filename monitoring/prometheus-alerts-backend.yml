@@ -27,3 +27,12 @@ groups:
         annotations:
           summary: "Latência p95 alta na busca"
           description: "A latência p95 de /api/v1/search/filters passou de 1.2s por 10 minutos."
+
+      - alert: JobsImportRejectedBySourceHigh
+        expr: sum by (source, source_type) (increase(hermes_jobs_import_rejected_by_source_total[15m])) >= 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rejeição de import elevada por source"
+          description: "A API rejeitou muitas vagas de uma mesma source na janela de 15 minutos."

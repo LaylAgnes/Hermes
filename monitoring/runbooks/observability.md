@@ -3,6 +3,10 @@
 ## Objetivo
 Orientar resposta rápida para incidentes de ingestão/search usando métricas de crawler + backend.
 
+## Pré-requisitos de stack
+- Subir stack: `monitoring/stack/docker-compose.observability.yml`.
+- Garantir scrape de `hermes-producer`, `hermes-consumer` e `hermes-jobs`.
+
 ## Dashboards sugeridos
 - **Crawler ingestão**: taxa de publicação, retries, DLQ e disponibilidade por source.
 - **Jobs API**: RPS, 5xx, latência p95 e disponibilidade.
@@ -32,3 +36,8 @@ Orientar resposta rápida para incidentes de ingestão/search usando métricas d
 ## Coleta mínima recomendada
 - Scrape Prometheus: `hermes-producer`, `hermes-consumer`, `hermes-jobs`.
 - Retenção mínima: 14 dias para análise de tendência.
+
+
+## Indicadores fim-a-fim por source
+- Ingestão no consumer: `hermes_consumer_imported_by_source_total`, `hermes_consumer_retried_by_source_total`, `hermes_consumer_dlq_by_source_total`.
+- Import no backend: `hermes_jobs_import_by_source_total`, `hermes_jobs_import_rejected_by_source_total`.
