@@ -41,6 +41,21 @@ public class JobEntity {
     @Column(nullable = false)
     private String source;
 
+    @Column(length = 120)
+    private String sourceType;
+
+    @Column(length = 200)
+    private String sourceName;
+
+    @Column
+    private Double confidence;
+
+    @Column(length = 80)
+    private String parserVersion;
+
+    @Column(length = 150)
+    private String ingestionTraceId;
+
     @Column(length = 500)
     private String title;
 

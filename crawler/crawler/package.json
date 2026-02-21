@@ -4,14 +4,21 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node -e \"console.log('no tests')\""
+    "producer": "node producer.js",
+    "consumer": "node consumer.js",
+    "replay": "node replay-dlq.js",
+    "test": "node -e \"console.log('no tests')\"",
+    "dlq-dashboard": "node dlq-dashboard.js",
+    "test:e2e": "node --test tests/pipeline.e2e.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "amqplib": "^0.10.8",
     "axios": "^1.13.5",
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "redis": "^4.7.0"
   }
 }

@@ -14,3 +14,27 @@ spring:
     console:
       enabled: true
       path: /h2
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+search:
+  synonyms:
+    seniority:
+      especialista: senior
+      coordenador: manager
+    area:
+      sre: devops
+      platform: backend
+    stacks:
+      - elixir
+      - rust
+    locations:
+      - chile
+      - colombia

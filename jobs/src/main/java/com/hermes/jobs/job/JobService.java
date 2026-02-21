@@ -53,6 +53,11 @@ public class JobService {
                 JobEntity entity = existingOpt.get();
                 entity.setColetadoEm(now);
                 entity.setActive(true);
+                if (entity.getSourceType() == null) entity.setSourceType("url-index");
+                if (entity.getSourceName() == null) entity.setSourceName(entity.getDomain());
+                if (entity.getConfidence() == null) entity.setConfidence(0.5);
+                if (entity.getParserVersion() == null) entity.setParserVersion("url-index-v1");
+                if (entity.getIngestionTraceId() == null) entity.setIngestionTraceId(java.util.UUID.randomUUID().toString());
                 toSave.add(entity);
             } else {
                 toSave.add(JobEntity.builder()
@@ -60,6 +65,11 @@ public class JobService {
                         .empresa(UrlUtils.extractCompany(url))
                         .domain(UrlUtils.extractDomain(url))
                         .source(UrlUtils.extractSource(url))
+                        .sourceType("url-index")
+                        .sourceName(UrlUtils.extractDomain(url))
+                        .confidence(0.5)
+                        .parserVersion("url-index-v1")
+                        .ingestionTraceId(java.util.UUID.randomUUID().toString())
                         .coletadoEm(now)
                         .active(true)
                         .build());
@@ -117,6 +127,11 @@ public class JobService {
             entity.setEmpresa(UrlUtils.extractCompany(normalizedUrl));
             entity.setDomain(UrlUtils.extractDomain(normalizedUrl));
             entity.setSource(UrlUtils.extractSource(normalizedUrl));
+            entity.setSourceType(normalizeNullableText(doc.sourceType()));
+            entity.setSourceName(normalizeNullableText(doc.sourceName()));
+            entity.setConfidence(doc.confidence() == null ? 0.0 : Math.max(0.0, Math.min(1.0, doc.confidence())));
+            entity.setParserVersion(normalizeNullableText(doc.parserVersion()));
+            entity.setIngestionTraceId(normalizeNullableText(doc.ingestionTraceId()));
 
             entity.setTitle(normalizeNullableText(doc.title()));
             entity.setLocation(normalizeNullableText(doc.location()));
@@ -140,6 +155,11 @@ public class JobService {
 
             entity.setSeniority(result.seniority());
             entity.setWorkMode(result.workMode());
+
+            if (entity.getSourceType() == null) entity.setSourceType(entity.getSource());
+            if (entity.getSourceName() == null) entity.setSourceName(entity.getEmpresa());
+            if (entity.getParserVersion() == null) entity.setParserVersion("unknown");
+            if (entity.getIngestionTraceId() == null) entity.setIngestionTraceId(java.util.UUID.randomUUID().toString());
 
             entity.setColetadoEm(now);
             entity.setActive(true);

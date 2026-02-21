@@ -7,5 +7,10 @@ public record JobDocument(
         String url,
         String title,
         String location,
-        String description
+        String description,
+        String sourceType,
+        String sourceName,
+        Double confidence,
+        String parserVersion,
+        String ingestionTraceId
 ) {}
