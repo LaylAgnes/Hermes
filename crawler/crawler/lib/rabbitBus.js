@@ -34,11 +34,20 @@ function parseMessage(msg) {
 }
 
 async function publishJob(channel, job) {
+  const traceparent = job.traceparent || null;
+  const tracestate = job.tracestate || null;
+
   channel.sendToQueue(QUEUE_JOBS, Buffer.from(JSON.stringify(job)), {
     persistent: true,
     contentType: 'application/json',
     messageId: `${job.url}::${job.ingestionTraceId}`,
-    headers: { sourceName: job.sourceName, sourceType: job.sourceType, retryCount: Number(job.retryCount || 0) }
+    headers: {
+      sourceName: job.sourceName,
+      sourceType: job.sourceType,
+      retryCount: Number(job.retryCount || 0),
+      ...(traceparent ? { traceparent } : {}),
+      ...(tracestate ? { tracestate } : {})
+    }
   });
 }
 

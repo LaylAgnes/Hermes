@@ -1,0 +1,38 @@
+groups:
+  - name: hermes-crawler-alerts
+    rules:
+      - alert: ConsumerDown
+        expr: hermes_consumer_up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hermes consumer indisponível"
+          description: "O consumer está degradado ou não reporta saúde há mais de 5 minutos."
+
+      - alert: ConsumerProcessingErrors
+        expr: increase(hermes_consumer_processing_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Erros de processamento no consumer"
+          description: "Erros inesperados ocorreram no loop de consumo nos últimos 5 minutos."
+
+      - alert: ConsumerDlqRateHigh
+        expr: increase(hermes_consumer_dlq_total[10m]) >= 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taxa de DLQ elevada"
+          description: "Pelo menos 5 mensagens foram para DLQ em 10 minutos."
+
+      - alert: ProducerSourceFailuresHigh
+        expr: increase(hermes_producer_source_failures_total[10m]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Falhas de coleta por source no producer"
+          description: "O producer registrou múltiplas falhas de coleta em janela curta."
