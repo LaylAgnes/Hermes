@@ -15,11 +15,12 @@ import java.util.Optional;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/search")
+@RequestMapping({"/api/search", "/api/v1/search"})
 @RequiredArgsConstructor
 public class SearchController {
 
     private final SearchService service;
+    private final QuerySynonymCatalog synonymCatalog;
 
     @PostMapping
     public Page<JobResponse> search(@RequestBody @Valid SearchRequest request, Pageable pageable) {
@@ -69,7 +70,7 @@ public class SearchController {
                 List.of(Seniority.values()),
                 List.of(Area.values()),
                 List.of("remote", "hybrid", "onsite"),
-                List.of("java", "python", "javascript", "typescript", "go", "c#", "kotlin", "php"),
+                synonymCatalog.stacksSet().stream().sorted().toList(),
                 List.of("spring", "react", "angular", "vue", "django", "flask", "laravel", "dotnet", "nodejs")
         );
     }
