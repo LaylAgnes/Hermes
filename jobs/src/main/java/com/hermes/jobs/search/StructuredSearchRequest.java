@@ -4,8 +4,8 @@ import java.util.Set;
 
 public record StructuredSearchRequest(
         Set<String> stacks,
-        Set<Seniority> seniorities,
-        Set<Area> areas,
+        Set<String> seniorities,
+        Set<String> areas,
         Set<String> workModes,
         String language,
         String framework,

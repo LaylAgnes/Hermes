@@ -1,7 +1,11 @@
 package com.hermes.jobs.job.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+
 import java.util.List;
 
 public record JobImportRequest(
-        List<JobDocument> jobs
+        @NotEmpty
+        List<@Valid JobDocument> jobs
 ) {}

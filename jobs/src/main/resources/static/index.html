@@ -4,19 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hermes Jobs Search</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7fb; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-    .grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-    .field { display: flex; flex-direction: column; gap: 6px; }
-    label { font-size: 12px; color: #555; }
-    input, select, button { padding: 10px; border-radius: 8px; border: 1px solid #d2d7e1; }
-    button { background: #1f6feb; color: #fff; border: none; cursor: pointer; }
-    .job { padding: 12px; border: 1px solid #e7ebf1; border-radius: 10px; margin-bottom: 10px; background: #fff; }
-    .meta { color: #666; font-size: 13px; margin: 4px 0; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-  </style>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <div class="container">
@@ -30,16 +18,19 @@
         <input id="keyword" placeholder="ex: fintech, pagamentos" />
       </div>
       <div class="field">
+        <label>Stacks (enter para adicionar)</label>
+        <input id="stack" placeholder="ex: java, react" />
+        <div id="stackChips" class="chips"></div>
+      </div>
+      <div class="field">
         <label>Senioridade</label>
-        <select id="seniority"><option value="">Todas</option></select>
+        <select id="seniority"><option value="">Adicionar...</option></select>
+        <div id="seniorityChips" class="chips"></div>
       </div>
       <div class="field">
         <label>Área</label>
-        <select id="area"><option value="">Todas</option></select>
-      </div>
-      <div class="field">
-        <label>Stack principal</label>
-        <input id="stack" placeholder="ex: java, react" />
+        <select id="area"><option value="">Adicionar...</option></select>
+        <div id="areaChips" class="chips"></div>
       </div>
       <div class="field">
         <label>Linguagem</label>
@@ -51,87 +42,46 @@
       </div>
       <div class="field">
         <label>Modelo de trabalho</label>
-        <select id="workMode"><option value="">Todos</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
+        <select id="workMode"><option value="">Adicionar...</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
+        <div id="workModeChips" class="chips"></div>
       </div>
       <div class="field">
         <label>Localização</label>
         <input id="location" placeholder="ex: brasil, portugal" />
       </div>
-      <div class="field" style="justify-content:end">
-        <label>&nbsp;</label>
-        <button id="searchBtn">Buscar vagas</button>
+      <div class="field">
+        <label>Ordenação</label>
+        <select id="sort"><option value="coletadoEm,desc">Mais recentes</option><option value="title,asc">Título (A-Z)</option><option value="empresa,asc">Empresa (A-Z)</option></select>
+      </div>
+      <div class="field full-width">
+        <div class="actions">
+          <button id="searchBtn">Buscar vagas</button>
+          <button id="shareBtn" type="button" class="secondary">Compartilhar busca</button>
+          <button id="clearBtn" type="button" class="secondary">Limpar</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="panel">
     <h3>Resultados</h3>
+    <p id="status" class="muted">Use os filtros e clique em buscar.</p>
     <div id="results"></div>
+    <div class="pager">
+      <button id="prevBtn" type="button" class="secondary">Anterior</button>
+      <span id="pageInfo" class="muted">Página 1</span>
+      <button id="nextBtn" type="button" class="secondary">Próxima</button>
+    </div>
   </div>
+
+  <dialog id="jobDetails">
+    <h3 id="detailTitle"></h3>
+    <p id="detailMeta" class="muted"></p>
+    <p id="detailDescription"></p>
+    <a id="detailUrl" target="_blank" rel="noopener noreferrer">Abrir vaga</a>
+    <form method="dialog"><button class="secondary" style="margin-top:10px">Fechar</button></form>
+  </dialog>
 </div>
-
-<script>
-async function loadOptions() {
-  const r = await fetch('/api/search/options');
-  const data = await r.json();
-
-  fillSelect('seniority', data.seniorities || []);
-  fillSelect('area', data.areas || []);
-  fillSelect('language', data.languages || []);
-  fillSelect('framework', data.frameworks || []);
-}
-
-function fillSelect(id, options) {
-  const select = document.getElementById(id);
-  options.forEach(option => {
-    const el = document.createElement('option');
-    el.value = option;
-    el.textContent = option;
-    select.appendChild(el);
-  });
-}
-
-async function search() {
-  const payload = {
-    keyword: document.getElementById('keyword').value,
-    language: document.getElementById('language').value,
-    framework: document.getElementById('framework').value,
-    location: document.getElementById('location').value,
-    stacks: document.getElementById('stack').value ? [document.getElementById('stack').value] : [],
-    seniorities: document.getElementById('seniority').value ? [document.getElementById('seniority').value] : [],
-    areas: document.getElementById('area').value ? [document.getElementById('area').value] : [],
-    workModes: document.getElementById('workMode').value ? [document.getElementById('workMode').value] : []
-  };
-
-  const r = await fetch('/api/search/filters?page=0&size=25', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await r.json();
-  const results = document.getElementById('results');
-  results.innerHTML = '';
-
-  (data.content || []).forEach(job => {
-    const div = document.createElement('div');
-    div.className = 'job';
-    div.innerHTML = `
-      <strong>${job.title || 'Sem título'}</strong>
-      <div class="meta">${job.empresa || '-'} • ${job.location || '-'} • ${job.seniority || '-'}</div>
-      <div class="meta">Stack: ${job.stacks || '-'}</div>
-      <a href="${job.url}" target="_blank">Candidatar</a>
-    `;
-    results.appendChild(div);
-  });
-
-  if (!data.content || data.content.length === 0) {
-    results.innerHTML = '<p>Nenhuma vaga encontrada com esses filtros.</p>';
-  }
-}
-
-document.getElementById('searchBtn').addEventListener('click', search);
-loadOptions();
-</script>
+<script src="/app.js"></script>
 </body>
 </html>

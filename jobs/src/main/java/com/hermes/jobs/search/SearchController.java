@@ -11,14 +11,16 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/search")
+@RequestMapping({"/api/search", "/api/v1/search"})
 @RequiredArgsConstructor
 public class SearchController {
 
     private final SearchService service;
+    private final QuerySynonymCatalog synonymCatalog;
 
     @PostMapping
     public Page<JobResponse> search(@RequestBody @Valid SearchRequest request, Pageable pageable) {
@@ -36,25 +38,18 @@ public class SearchController {
     public Page<JobResponse> searchWithFilters(@RequestBody StructuredSearchRequest request, Pageable pageable) {
         SearchCriteria criteria = new SearchCriteria();
 
-        if (request.stacks() != null) {
-            request.stacks().stream()
-                    .map(value -> value.toLowerCase(Locale.ROOT).trim())
-                    .filter(value -> !value.isBlank())
-                    .forEach(criteria.stacks::add);
-        }
+        normalizeSet(request.stacks()).forEach(criteria.stacks::add);
+        normalizeSet(request.workModes()).forEach(criteria.workModes::add);
 
-        if (request.seniorities() != null)
-            criteria.seniorities.addAll(request.seniorities());
+        normalizeSet(request.seniorities()).stream()
+                .map(this::parseSeniority)
+                .flatMap(Optional::stream)
+                .forEach(criteria.seniorities::add);
 
-        if (request.areas() != null)
-            criteria.areas.addAll(request.areas());
-
-        if (request.workModes() != null) {
-            request.workModes().stream()
-                    .map(value -> value.toLowerCase(Locale.ROOT).trim())
-                    .filter(value -> !value.isBlank())
-                    .forEach(criteria.workModes::add);
-        }
+        normalizeSet(request.areas()).stream()
+                .map(this::parseArea)
+                .flatMap(Optional::stream)
+                .forEach(criteria.areas::add);
 
         appendFreeTerm(criteria, request.language());
         appendFreeTerm(criteria, request.framework());
@@ -75,9 +70,48 @@ public class SearchController {
                 List.of(Seniority.values()),
                 List.of(Area.values()),
                 List.of("remote", "hybrid", "onsite"),
-                List.of("java", "python", "javascript", "typescript", "go", "c#", "kotlin", "php"),
+                synonymCatalog.stacksSet().stream().sorted().toList(),
                 List.of("spring", "react", "angular", "vue", "django", "flask", "laravel", "dotnet", "nodejs")
         );
+    }
+
+    private Set<String> normalizeSet(Set<String> values) {
+        if (values == null)
+            return Set.of();
+
+        return values.stream()
+                .map(value -> value == null ? "" : value.toLowerCase(Locale.ROOT).trim())
+                .filter(value -> !value.isBlank())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Optional<Seniority> parseSeniority(String value) {
+        String normalized = value.toUpperCase(Locale.ROOT);
+
+        if ("JR".equals(normalized))
+            normalized = "JUNIOR";
+        else if ("SR".equals(normalized))
+            normalized = "SENIOR";
+        else if ("PLENO".equals(normalized) || "MIDDLE".equals(normalized))
+            normalized = "MID";
+
+        try {
+            return Optional.of(Seniority.valueOf(normalized));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<Area> parseArea(String value) {
+        String normalized = value.toUpperCase(Locale.ROOT)
+                .replace('-', '_')
+                .replace(' ', '_');
+
+        try {
+            return Optional.of(Area.valueOf(normalized));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
     }
 
     private void appendFreeTerm(SearchCriteria criteria, String value) {
@@ -104,17 +138,10 @@ public class SearchController {
         if (request.location() != null && !request.location().isBlank())
             tokens.add(request.location().trim());
 
-        if (request.stacks() != null)
-            request.stacks().forEach(tokens::add);
-
-        if (request.workModes() != null)
-            request.workModes().forEach(tokens::add);
-
-        if (request.seniorities() != null)
-            request.seniorities().forEach(value -> tokens.add(value.name()));
-
-        if (request.areas() != null)
-            request.areas().forEach(value -> tokens.add(value.name()));
+        normalizeSet(request.stacks()).forEach(tokens::add);
+        normalizeSet(request.workModes()).forEach(tokens::add);
+        normalizeSet(request.seniorities()).forEach(tokens::add);
+        normalizeSet(request.areas()).forEach(tokens::add);
 
         return String.join(" ", tokens);
     }
