@@ -22,20 +22,21 @@ npm run start
 - `MAX_SOURCE_RETRIES` (default: `2`)
 - `BATCH_SIZE` (default: `50`)
 - `DLQ_PATH` (default: `./dlq.jsonl`)
+- `QUEUE_PATH` (default: `./queue.jsonl`)
 - `METRICS_PORT` (ex.: `9090` para habilitar `/healthz` e `/metrics`)
-- `PARSER_VERSION` (default: `v2`)
+- `PARSER_VERSION` (default: `v3`)
 
 ## Fontes/ATS suportadas
 
-- `greenhouse` (prioriza API pública boards)
-- `lever` (prioriza API pública postings)
+- `greenhouse` (API pública boards + detalhe de vaga)
+- `lever` (API pública postings)
 - `gupy` (scraping com Playwright)
 - `workday` (scraping com Playwright)
 
 ## Operação
 
-- Pipeline com fila in-memory + envio em lotes para API.
+- Pipeline com fila persistida em disco (`QUEUE_PATH`) + envio em lotes para API.
 - Retry por fonte e por envio API.
 - DLQ JSONL para falhas de extração, validação e envio, com replay automático de falhas de API.
 - Qualidade de dados por vaga (`sourceType`, `confidence`, `parserVersion`, `ingestionTraceId`).
-- Endpoints operacionais opcionais (`/healthz`, `/metrics`).
+- Endpoints operacionais opcionais (`/healthz`, `/metrics`) com métricas por fonte.
