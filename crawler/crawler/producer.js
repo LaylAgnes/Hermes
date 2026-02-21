@@ -21,11 +21,45 @@ const metrics = {
   published: 0,
   dropped: 0,
   sourceFailures: 0,
+  sourceFailuresByName: {},
   health: 'starting',
   lastRunAt: null
 };
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+function esc(value) {
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/"/g, '\\"');
+}
+
+function asPrometheusMetrics() {
+  const lines = [
+    '# HELP hermes_producer_runs_total Total de execuções do producer.',
+    '# TYPE hermes_producer_runs_total counter',
+    `hermes_producer_runs_total ${metrics.runs}`,
+    '# HELP hermes_producer_jobs_published_total Total de vagas publicadas na fila.',
+    '# TYPE hermes_producer_jobs_published_total counter',
+    `hermes_producer_jobs_published_total ${metrics.published}`,
+    '# HELP hermes_producer_jobs_dropped_total Total de vagas descartadas por validação.',
+    '# TYPE hermes_producer_jobs_dropped_total counter',
+    `hermes_producer_jobs_dropped_total ${metrics.dropped}`,
+    '# HELP hermes_producer_source_failures_total Total de falhas de coleta por fonte.',
+    '# TYPE hermes_producer_source_failures_total counter',
+    `hermes_producer_source_failures_total ${metrics.sourceFailures}`,
+    '# HELP hermes_producer_up Sinalização de saúde do producer (1 saudável, 0 degradado).',
+    '# TYPE hermes_producer_up gauge',
+    `hermes_producer_up ${metrics.health === 'healthy' ? 1 : 0}`
+  ];
+
+  for (const [sourceName, failures] of Object.entries(metrics.sourceFailuresByName)) {
+    lines.push(`hermes_producer_source_failures_by_source_total{source=\"${esc(sourceName)}\"} ${failures}`);
+  }
+
+  return `${lines.join('\n')}\n`;
+}
 
 function startServer() {
   if (!METRICS_PORT) return;
@@ -36,6 +70,14 @@ function startServer() {
       return;
     }
     if (req.url === '/metrics') {
+      res.writeHead(200, {
+        'content-type': 'text/plain; version=0.0.4; charset=utf-8',
+        'cache-control': 'no-store'
+      });
+      res.end(asPrometheusMetrics());
+      return;
+    }
+    if (req.url === '/metrics/json') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify(metrics));
       return;
@@ -78,6 +120,7 @@ async function runOnce(browser, channel, idempotency, opts = {}) {
       }
     } catch (error) {
       metrics.sourceFailures += 1;
+      metrics.sourceFailuresByName[source.name] = (metrics.sourceFailuresByName[source.name] || 0) + 1;
       console.error(`[producer:${source.name}] ${error.message}`);
     }
   }
@@ -114,4 +157,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { runOnce, metrics };
+module.exports = { runOnce, metrics, asPrometheusMetrics };

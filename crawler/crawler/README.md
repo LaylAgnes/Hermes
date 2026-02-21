@@ -31,7 +31,7 @@ REPLAY_SOURCE=vtex-lever REPLAY_ERROR_CONTAINS=timeout npm run replay
 - `REQUEST_TIMEOUT_MS` (default: `30000`)
 - `API_RETRIES` (default: `3`)
 - `MAX_SOURCE_RETRIES` (default: `2`)
-- `METRICS_PORT` (ex.: `9090` para `/healthz` e `/metrics` no producer)
+- `METRICS_PORT` (ex.: `9090` para `/healthz`, `/metrics` [Prometheus] e `/metrics/json` no producer)
 - `PARSER_VERSION` (default: `v4`)
 
 Idempotência distribuída (Redis):
