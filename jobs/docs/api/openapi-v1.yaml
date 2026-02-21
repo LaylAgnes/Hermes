@@ -1,0 +1,42 @@
+openapi: 3.0.3
+info:
+  title: Hermes Jobs API
+  version: v1
+  description: |
+    Contrato oficial da API v1.
+servers:
+  - url: /api/v1
+paths:
+  /search/options:
+    get:
+      summary: Lista opções de filtros suportados
+      operationId: listSearchOptionsV1
+      responses:
+        '200':
+          description: Opções retornadas com sucesso
+  /search/filters:
+    post:
+      summary: Busca vagas com filtros estruturados
+      operationId: searchWithFiltersV1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Página de vagas
+  /search:
+    post:
+      summary: Busca vagas por texto
+      operationId: searchByTextV1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Página de vagas

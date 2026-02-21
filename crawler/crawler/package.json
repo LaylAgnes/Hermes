@@ -7,7 +7,7 @@
     "producer": "node producer.js",
     "consumer": "node consumer.js",
     "replay": "node replay-dlq.js",
-    "test": "node -e \"console.log('no tests')\"",
+    "test": "node --test tests/producer.metrics.test.js tests/consumer.metrics.test.js",
     "dlq-dashboard": "node dlq-dashboard.js",
     "test:e2e": "node --test tests/pipeline.e2e.test.js"
   },

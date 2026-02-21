@@ -31,8 +31,10 @@ REPLAY_SOURCE=vtex-lever REPLAY_ERROR_CONTAINS=timeout npm run replay
 - `REQUEST_TIMEOUT_MS` (default: `30000`)
 - `API_RETRIES` (default: `3`)
 - `MAX_SOURCE_RETRIES` (default: `2`)
-- `METRICS_PORT` (ex.: `9090` para `/healthz` e `/metrics` no producer)
+- `METRICS_PORT` (ex.: `9090` para `/healthz`, `/metrics` [Prometheus] e `/metrics/json` no producer)
+- `CONSUMER_METRICS_PORT` (ex.: `9091` para `/healthz`, `/metrics` [Prometheus] e `/metrics/json` no consumer)
 - `PARSER_VERSION` (default: `v4`)
+- `OTEL_EXPORTER_OTLP_ENDPOINT` (opcional, para coletor OTLP quando tracing estiver habilitado no backend)
 
 Idempotência distribuída (Redis):
 - `IDEMPOTENCY_REDIS_URL` (default: `redis://localhost:6379`)
@@ -58,12 +60,15 @@ Painel DLQ:
 - `gupy` (scraping com Playwright)
 - `workday` (scraping com Playwright)
 
+Atualmente o catálogo vem com 8 fontes de exemplo distribuídas nesses ATS.
+
 ## Operação
 
 - Arquitetura producer/consumer separada com RabbitMQ.
 - Retry por mensagem no consumer e DLQ gerenciada no broker.
 - Replay controlado da DLQ por critérios (source/erro/janela de tempo) via CLI e painel web.
 - Idempotência forte por `url + ingestionTraceId` com chave distribuída em Redis.
+- Propagação de contexto de tracing (`traceparent`) entre producer -> RabbitMQ -> consumer -> API.
 
 ## Teste E2E (crawler no fluxo)
 
@@ -74,3 +79,14 @@ npm run test:e2e
 Valida o fluxo com broker RabbitMQ real: producer -> fila AMQP -> consumer -> `POST /api/jobs/import`, incluindo cenário de roteamento para DLQ em falha de import.
 
 > Requer RabbitMQ acessível em `RABBIT_URL` (default `amqp://localhost`).
+
+
+## Alertas (exemplo Prometheus)
+
+Há um conjunto inicial de alertas em `monitoring/prometheus-alerts.yml` cobrindo:
+- Consumer indisponível (`ConsumerDown`)
+- Erro de processamento no consumer (`ConsumerProcessingErrors`)
+- Envio para DLQ acima do limiar (`ConsumerDlqRateHigh`)
+- Falha de coleta no producer (`ProducerSourceFailuresHigh`)
+
+As métricas de producer agora incluem disponibilidade e sucesso por source (`hermes_producer_source_up`, `hermes_producer_source_success_total`, `hermes_producer_source_jobs_collected_total`).
