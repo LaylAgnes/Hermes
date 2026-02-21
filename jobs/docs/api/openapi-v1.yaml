@@ -3,7 +3,7 @@ info:
   title: Hermes Jobs API
   version: v1
   description: |
-    Contrato oficial da API v1.
+    Contrato oficial da API v1 para ingestão e busca de vagas.
 servers:
   - url: /api/v1
 paths:
@@ -14,19 +14,10 @@ paths:
       responses:
         '200':
           description: Opções retornadas com sucesso
-  /search/filters:
-    post:
-      summary: Busca vagas com filtros estruturados
-      operationId: searchWithFiltersV1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Página de vagas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchOptionsResponse'
   /search:
     post:
       summary: Busca vagas por texto
@@ -36,7 +27,196 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/SearchRequest'
       responses:
         '200':
           description: Página de vagas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+  /search/filters:
+    post:
+      summary: Busca vagas com filtros estruturados
+      operationId: searchWithFiltersV1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructuredSearchRequest'
+      responses:
+        '200':
+          description: Página de vagas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+  /jobs/import:
+    post:
+      summary: Importa documentos de vagas no índice
+      operationId: importJobsV1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobImportRequest'
+      responses:
+        '200':
+          description: Quantidade de vagas importadas
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int32
+  /jobs/import-urls:
+    post:
+      summary: Importa vagas por URL
+      operationId: importUrlsV1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+      responses:
+        '200':
+          description: Quantidade de URLs importadas
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int32
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          example: "java spring"
+    StructuredSearchRequest:
+      type: object
+      properties:
+        stacks:
+          type: array
+          items: { type: string }
+        seniorities:
+          type: array
+          items: { type: string }
+        areas:
+          type: array
+          items: { type: string }
+        workModes:
+          type: array
+          items: { type: string }
+        language:
+          type: string
+        framework:
+          type: string
+        keyword:
+          type: string
+        location:
+          type: string
+    SearchOptionsResponse:
+      type: object
+      required: [seniorities, areas, workModes, languages, frameworks]
+      properties:
+        seniorities:
+          type: array
+          items: { type: string }
+        areas:
+          type: array
+          items: { type: string }
+        workModes:
+          type: array
+          items: { type: string }
+        languages:
+          type: array
+          items: { type: string }
+        frameworks:
+          type: array
+          items: { type: string }
+    JobImportRequest:
+      type: object
+      required: [jobs]
+      properties:
+        jobs:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/JobDocument'
+    JobDocument:
+      type: object
+      required: [url, title, location, description]
+      properties:
+        url: { type: string, format: uri }
+        title: { type: string }
+        location: { type: string }
+        description: { type: string }
+        sourceType: { type: string }
+        sourceName: { type: string }
+        confidence: { type: number, format: double }
+        parserVersion: { type: string }
+        ingestionTraceId: { type: string }
+    ImportRequest:
+      type: object
+      required: [urls]
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uri
+    JobResponse:
+      type: object
+      required:
+        - id
+        - url
+        - title
+        - location
+        - description
+        - active
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        empresa: { type: string }
+        domain: { type: string }
+        source: { type: string }
+        sourceType: { type: string }
+        sourceName: { type: string }
+        confidence: { type: number, format: double }
+        parserVersion: { type: string }
+        ingestionTraceId: { type: string }
+        title: { type: string }
+        location: { type: string }
+        description: { type: string }
+        stacks: { type: string }
+        seniority: { type: string }
+        workMode: { type: string }
+        coletadoEm: { type: string, format: date-time }
+        active: { type: boolean }
+    JobPage:
+      type: object
+      required: [content, totalElements, totalPages, size, number]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobResponse'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32

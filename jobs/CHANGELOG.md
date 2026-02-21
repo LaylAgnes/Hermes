@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2026-02-21
+### Added
+- Contrato OpenAPI v1 detalhado com schemas de request/response e endpoints de busca/import.
+- Contract tests para validar presença/estrutura do arquivo OpenAPI e compatibilidade das respostas reais da API v1.
+
 ## [1.1.0] - 2026-02-21
 ### Added
 - Exposição de métricas Prometheus e tracing OTLP no serviço `jobs`.

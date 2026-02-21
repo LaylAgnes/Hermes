@@ -97,6 +97,12 @@
 			<scope>test</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.yaml</groupId>
+			<artifactId>snakeyaml</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Banco de dados local-->
 		<dependency>
 			<groupId>com.h2database</groupId>
