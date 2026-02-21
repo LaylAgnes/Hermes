@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hermes Jobs Search</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="container">
+  <h1>Buscador de vagas Hermes</h1>
+  <p>Filtre por senioridade, área, stack, linguagem, framework e localização.</p>
+
+  <div class="panel">
+    <div class="grid">
+      <div class="field">
+        <label>Palavra-chave</label>
+        <input id="keyword" placeholder="ex: fintech, pagamentos" />
+      </div>
+      <div class="field">
+        <label>Stacks (enter para adicionar)</label>
+        <input id="stack" placeholder="ex: java, react" />
+        <div id="stackChips" class="chips"></div>
+      </div>
+      <div class="field">
+        <label>Senioridade</label>
+        <select id="seniority"><option value="">Adicionar...</option></select>
+        <div id="seniorityChips" class="chips"></div>
+      </div>
+      <div class="field">
+        <label>Área</label>
+        <select id="area"><option value="">Adicionar...</option></select>
+        <div id="areaChips" class="chips"></div>
+      </div>
+      <div class="field">
+        <label>Linguagem</label>
+        <select id="language"><option value="">Todas</option></select>
+      </div>
+      <div class="field">
+        <label>Framework</label>
+        <select id="framework"><option value="">Todos</option></select>
+      </div>
+      <div class="field">
+        <label>Modelo de trabalho</label>
+        <select id="workMode"><option value="">Adicionar...</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select>
+        <div id="workModeChips" class="chips"></div>
+      </div>
+      <div class="field">
+        <label>Localização</label>
+        <input id="location" placeholder="ex: brasil, portugal" />
+      </div>
+      <div class="field">
+        <label>Ordenação</label>
+        <select id="sort"><option value="coletadoEm,desc">Mais recentes</option><option value="title,asc">Título (A-Z)</option><option value="empresa,asc">Empresa (A-Z)</option></select>
+      </div>
+      <div class="field full-width">
+        <div class="actions">
+          <button id="searchBtn">Buscar vagas</button>
+          <button id="shareBtn" type="button" class="secondary">Compartilhar busca</button>
+          <button id="clearBtn" type="button" class="secondary">Limpar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Resultados</h3>
+    <p id="status" class="muted">Use os filtros e clique em buscar.</p>
+    <div id="results"></div>
+    <div class="pager">
+      <button id="prevBtn" type="button" class="secondary">Anterior</button>
+      <span id="pageInfo" class="muted">Página 1</span>
+      <button id="nextBtn" type="button" class="secondary">Próxima</button>
+    </div>
+  </div>
+
+  <dialog id="jobDetails">
+    <h3 id="detailTitle"></h3>
+    <p id="detailMeta" class="muted"></p>
+    <p id="detailDescription"></p>
+    <a id="detailUrl" target="_blank" rel="noopener noreferrer">Abrir vaga</a>
+    <form method="dialog"><button class="secondary" style="margin-top:10px">Fechar</button></form>
+  </dialog>
+</div>
+<script src="../app.js"></script>
+</body>
+</html>
